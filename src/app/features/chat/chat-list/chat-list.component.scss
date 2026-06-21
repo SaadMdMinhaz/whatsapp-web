@@ -1,0 +1,263 @@
+﻿.whatsapp-layout {
+    height: 100vh;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 410px minmax(0, 1fr);
+    background: #e7eeeb;
+}
+
+.inbox-pane {
+    min-width: 0;
+    display: grid;
+    grid-template-rows: auto auto auto 1fr;
+    border-right: 1px solid #cfdad6;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.pane-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.05rem 1rem 0.75rem;
+    background: #f0f4f2;
+}
+
+h1 {
+    margin: 0;
+    color: #111b21;
+    font-size: 1.55rem;
+    letter-spacing: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.45rem;
+}
+
+button {
+    min-height: 2.3rem;
+    border: 0;
+    border-radius: 999px;
+    padding: 0 0.85rem;
+    background: #e1ece7;
+    color: #0f5f59;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+button:hover,
+button.active {
+    background: #0f766e;
+    color: #ffffff;
+}
+
+.tab-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e7eeeb;
+    background: #ffffff;
+}
+
+.tab-row button {
+    border-radius: 0.8rem;
+}
+
+.search-box {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem;
+    color: #667781;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.search-box input {
+    height: 2.65rem;
+    border: 0;
+    border-radius: 0.7rem;
+    padding: 0 1rem;
+    background: #f0f4f2;
+    color: #111b21;
+    font: inherit;
+}
+
+.chat-list,
+.status-list,
+.call-list {
+    min-height: 0;
+    overflow: auto;
+}
+
+.chat-row,
+.status-row,
+.my-status,
+.call-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.85rem;
+    align-items: center;
+    padding: 0.82rem 1rem;
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid #edf2f0;
+}
+
+.chat-row:hover,
+.status-row:hover,
+.my-status:hover,
+.call-row:hover {
+    background: #f5f8f7;
+}
+
+.avatar {
+    width: 3rem;
+    height: 3rem;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: #0f766e;
+    color: #fff;
+    font-weight: 800;
+}
+
+.ring {
+    outline: 3px solid var(--status-color);
+    outline-offset: 3px;
+}
+
+.chat-summary {
+    min-width: 0;
+}
+
+.chat-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.chat-title strong,
+.status-row strong,
+.my-status strong,
+.call-row strong {
+    color: #111b21;
+}
+
+time {
+    color: #667781;
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+p {
+    margin: 0.25rem 0 0;
+    color: #667781;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.typing {
+    color: #0f766e;
+    font-weight: 800;
+}
+
+.unread {
+    min-width: 1.45rem;
+    height: 1.45rem;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: #0f766e;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.status-list {
+    display: grid;
+    align-content: start;
+}
+
+.status-list small {
+    padding: 1rem 1rem 0.45rem;
+    color: #667781;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.call-row button {
+    background: transparent;
+    color: #0f766e;
+}
+
+.empty-chat {
+    min-width: 0;
+    display: grid;
+    place-items: center;
+    border-bottom: 5px solid #0f766e;
+    background: #f7faf9;
+}
+
+.empty-card {
+    width: min(440px, 90%);
+    display: grid;
+    justify-items: center;
+    gap: 1rem;
+    text-align: center;
+    color: #667781;
+}
+
+.empty-card h2 {
+    margin: 0;
+    color: #263d38;
+    font-size: 2rem;
+    font-weight: 500;
+    letter-spacing: 0;
+}
+
+.empty-card p {
+    white-space: normal;
+    line-height: 1.6;
+}
+
+.screen-mark {
+    width: 12rem;
+    aspect-ratio: 1.45;
+    display: grid;
+    gap: 0.45rem;
+    padding: 1.25rem;
+    border-radius: 1rem;
+    border: 2px solid #d6e4df;
+    background: #ffffff;
+    box-shadow: 0 22px 60px rgba(15, 23, 42, 0.08);
+}
+
+.screen-mark span {
+    border-radius: 999px;
+    background: #dbe9e4;
+}
+
+.screen-mark span:nth-child(2) {
+    width: 72%;
+}
+
+.screen-mark span:nth-child(3) {
+    width: 48%;
+    justify-self: end;
+    background: #b9ded3;
+}
+
+@media (max-width: 900px) {
+    .whatsapp-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .empty-chat {
+        display: none;
+    }
+}

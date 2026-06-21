@@ -1,0 +1,21 @@
+﻿<div class="app-shell">
+  <aside class="app-rail">
+    <a class="rail-brand" routerLink="/app/chats" aria-label="Connectly home">C</a>
+
+    <nav aria-label="App navigation">
+      <a routerLink="/app/chats" routerLinkActive="active" title="Chats">Chats</a>
+      <a routerLink="/app/chats" routerLinkActive="active" title="Status">Status</a>
+      <a routerLink="/app/chats" routerLinkActive="active" title="Calls">Calls</a>
+    </nav>
+
+    <div class="rail-bottom">
+      <a routerLink="/app/settings" routerLinkActive="active" title="Settings">Settings</a>
+      <a routerLink="/app/profile" routerLinkActive="active" class="profile-dot" title="Profile">{{ user()?.avatar }}</a>
+      <button type="button" title="Logout" (click)="logout()">Logout</button>
+    </div>
+  </aside>
+
+  <main class="workspace">
+    <router-outlet />
+  </main>
+</div>

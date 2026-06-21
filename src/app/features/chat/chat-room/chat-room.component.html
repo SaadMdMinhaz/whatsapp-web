@@ -1,0 +1,68 @@
+﻿<section class="chat-screen">
+  <aside class="conversation-pane">
+    <header>
+      <h1>Chats</h1>
+      <a routerLink="/app/chats">All</a>
+    </header>
+
+    <div class="chat-list">
+      @for (item of threads(); track item.id) {
+        <a class="chat-row" [class.selected]="item.id === threadId()" [routerLink]="['/app/chats', item.id]">
+          <span class="avatar">{{ item.avatar }}</span>
+          <div>
+            <strong>{{ item.title }}</strong>
+            <p>{{ item.typingUserId ? 'typing...' : item.lastMessage }}</p>
+          </div>
+          <time>{{ item.lastMessageAt }}</time>
+        </a>
+      }
+    </div>
+  </aside>
+
+  <section class="room">
+    <header class="room-header">
+      <span class="avatar">{{ thread()?.avatar }}</span>
+      <div>
+        <h2>{{ thread()?.title }}</h2>
+        <p>{{ thread()?.typingUserId ? 'typing...' : 'online' }}</p>
+      </div>
+      <div class="header-actions">
+        <button type="button">Search</button>
+        <button type="button" (click)="chat.toggleArchive(threadId())">Archive</button>
+      </div>
+    </header>
+
+    <div class="message-list">
+      @for (message of messages(); track message.id) {
+        <article class="message" [class.mine]="message.senderId === 'u1'">
+          @if (message.senderId !== 'u1' && thread()?.type === 'group') {
+            <strong>{{ chat.getUser(message.senderId)?.name }}</strong>
+          }
+          @if (message.body) {
+            <p>{{ message.body }}</p>
+          }
+          @if (message.attachment) {
+            <div class="attachment">
+              <span>{{ message.attachment.type }}</span>
+              <div>
+                <strong>{{ message.attachment.name }}</strong>
+                <small>{{ message.attachment.duration || message.attachment.size }}</small>
+              </div>
+            </div>
+          }
+          <footer>
+            <span>{{ message.sentAt }}</span>
+            <span>{{ message.status }}</span>
+          </footer>
+        </article>
+      }
+    </div>
+
+    <form class="composer" (ngSubmit)="send()">
+      <button type="button" title="Attach file">File</button>
+      <button type="button" title="Record voice note">Voice</button>
+      <textarea [value]="draft()" (input)="updateDraft($event)" placeholder="Type a message"></textarea>
+      <button class="send" type="submit">Send</button>
+    </form>
+  </section>
+</section>

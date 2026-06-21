@@ -1,0 +1,91 @@
+﻿<section class="whatsapp-layout">
+  <aside class="inbox-pane">
+    <header class="pane-header">
+      <h1>{{ activeTab() === 'chats' ? 'Chats' : activeTab() === 'status' ? 'Status' : 'Calls' }}</h1>
+      <div class="header-actions">
+        <button type="button" title="New chat">New</button>
+        <button type="button" title="Menu">Menu</button>
+      </div>
+    </header>
+
+    <div class="tab-row" role="tablist" aria-label="Inbox sections">
+      <button type="button" [class.active]="activeTab() === 'chats'" (click)="setTab('chats')">Chats</button>
+      <button type="button" [class.active]="activeTab() === 'status'" (click)="setTab('status')">Status</button>
+      <button type="button" [class.active]="activeTab() === 'calls'" (click)="setTab('calls')">Calls</button>
+    </div>
+
+    @if (activeTab() === 'chats') {
+      <label class="search-box">
+        <span>Search chats</span>
+        <input type="search" placeholder="Search or start a new chat" (input)="updateSearch($event)" />
+      </label>
+
+      <div class="chat-list">
+        @for (thread of threads(); track thread.id) {
+          <a class="chat-row" [routerLink]="['/app/chats', thread.id]">
+            <span class="avatar">{{ thread.avatar }}</span>
+            <div class="chat-summary">
+              <div class="chat-title">
+                <strong>{{ thread.title }}</strong>
+                <time>{{ thread.lastMessageAt }}</time>
+              </div>
+              <p [class.typing]="thread.typingUserId">{{ thread.typingUserId ? 'typing...' : thread.lastMessage }}</p>
+            </div>
+            @if (thread.unreadCount) {
+              <span class="unread">{{ thread.unreadCount }}</span>
+            }
+          </a>
+        }
+      </div>
+    }
+
+    @if (activeTab() === 'status') {
+      <div class="status-list">
+        <article class="my-status">
+          <span class="avatar">AK</span>
+          <div>
+            <strong>My status</strong>
+            <p>Tap to add status update</p>
+          </div>
+        </article>
+        <small>Recent updates</small>
+        @for (story of stories(); track story.id) {
+          <article class="status-row" [style.--status-color]="story.accent">
+            <span class="avatar ring">{{ chat.getUser(story.userId)?.avatar }}</span>
+            <div>
+              <strong>{{ story.title }}</strong>
+              <p>{{ story.postedAt }}</p>
+            </div>
+          </article>
+        }
+      </div>
+    }
+
+    @if (activeTab() === 'calls') {
+      <div class="call-list">
+        @for (thread of threads(); track thread.id) {
+          <article class="call-row">
+            <span class="avatar">{{ thread.avatar }}</span>
+            <div>
+              <strong>{{ thread.title }}</strong>
+              <p>{{ thread.lastMessageAt }} - outgoing</p>
+            </div>
+            <button type="button">Call</button>
+          </article>
+        }
+      </div>
+    }
+  </aside>
+
+  <section class="empty-chat">
+    <div class="empty-card">
+      <div class="screen-mark">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <h2>Connectly for Web</h2>
+      <p>Select a chat to send messages, voice notes, files, images, and status replies.</p>
+    </div>
+  </section>
+</section>

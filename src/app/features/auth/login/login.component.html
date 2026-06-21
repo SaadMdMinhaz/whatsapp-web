@@ -1,0 +1,25 @@
+﻿<main class="auth-page">
+  <section class="auth-panel">
+    <div class="brand-mark">C</div>
+    <p class="eyebrow">Private messaging</p>
+    <h1>Login to Connectly</h1>
+    <p class="lede">Open your chats, status updates, calls, media, and personal settings.</p>
+
+    <form (ngSubmit)="submit()" class="auth-form">
+      <label>Email<input [(ngModel)]="email" name="email" type="email" autocomplete="email" required /></label>
+      <label>Password<input [(ngModel)]="password" name="password" type="password" autocomplete="current-password" required /></label>
+      <button class="primary-action" type="submit">Login</button>
+    </form>
+
+    <p class="switch-copy">New here? <a routerLink="/register">Create an account</a></p>
+  </section>
+
+  <aside class="auth-visual">
+    <div class="chat-preview">
+      <div class="preview-header"><span class="avatar">NR</span><div><strong>Nadia Rahman</strong><small>online</small></div></div>
+      <div class="bubble incoming">Are you free for a quick call?</div>
+      <div class="bubble outgoing">Yes, send me the files first.</div>
+      <div class="status-row"><span>Delivered</span><span>Seen</span><span>Typing</span></div>
+    </div>
+  </aside>
+</main>
