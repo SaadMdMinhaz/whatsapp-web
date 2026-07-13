@@ -90,6 +90,21 @@ input:focus {
     font-weight: 800;
 }
 
+.error-banner {
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    background: #fef2f2;
+    color: #dc2626;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border: 1px solid #fecaca;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .auth-visual {
     display: grid;
     place-items: center;

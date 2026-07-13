@@ -1,26 +1,48 @@
 ﻿<section class="whatsapp-layout">
   <aside class="inbox-pane">
     <header class="pane-header">
-      <h1>{{ activeTab() === 'chats' ? 'Chats' : activeTab() === 'status' ? 'Status' : 'Calls' }}</h1>
+      <h1>Chats</h1>
       <div class="header-actions">
-        <button type="button" title="New chat">New</button>
-        <button type="button" title="Menu">Menu</button>
+        <button type="button" title="New chat" (click)="toggleNewChat()">New</button>
       </div>
     </header>
 
-    <div class="tab-row" role="tablist" aria-label="Inbox sections">
-      <button type="button" [class.active]="activeTab() === 'chats'" (click)="setTab('chats')">Chats</button>
-      <button type="button" [class.active]="activeTab() === 'status'" (click)="setTab('status')">Status</button>
-      <button type="button" [class.active]="activeTab() === 'calls'" (click)="setTab('calls')">Calls</button>
-    </div>
+    @if (showNewChat()) {
+      <div class="new-chat-panel">
+        <label class="search-box">
+          <span>Search users to start chatting</span>
+          <input type="search" placeholder="Search by name or email" (input)="searchUsers($event)" [value]="searchQuery()" autofocus />
+        </label>
+        @if (searchResults().length > 0) {
+          <div class="search-results">
+            @for (user of searchResults(); track user.id) {
+              <button class="search-result-row" (click)="startConversation(user.id)">
+                <span class="avatar">{{ user.displayName?.charAt(0) || '?' }}</span>
+                <div class="chat-summary">
+                  <strong>{{ user.displayName || user.username }}</strong>
+                  <p>{{ user.about || user.phoneNumber }}</p>
+                </div>
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
 
-    @if (activeTab() === 'chats') {
-      <label class="search-box">
-        <span>Search chats</span>
-        <input type="search" placeholder="Search or start a new chat" (input)="updateSearch($event)" />
-      </label>
+    <label class="search-box">
+      <span>Search chats</span>
+      <input type="search" placeholder="Search or start a new chat" (input)="updateSearch($event)" [value]="query()" />
+    </label>
 
-      <div class="chat-list">
+    <div class="chat-list">
+      @if (chat.loading()) {
+        <div class="empty-state">Loading conversations...</div>
+      } @else if (threads().length === 0) {
+        <div class="empty-state">
+          <p>No conversations yet</p>
+          <p>Click "New" to start chatting</p>
+        </div>
+      } @else {
         @for (thread of threads(); track thread.id) {
           <a class="chat-row" [routerLink]="['/app/chats', thread.id]">
             <span class="avatar">{{ thread.avatar }}</span>
@@ -29,52 +51,15 @@
                 <strong>{{ thread.title }}</strong>
                 <time>{{ thread.lastMessageAt }}</time>
               </div>
-              <p [class.typing]="thread.typingUserId">{{ thread.typingUserId ? 'typing...' : thread.lastMessage }}</p>
+              <p>{{ getOtherParticipantLastMessage(thread) }}</p>
             </div>
-            @if (thread.unreadCount) {
+            @if (thread.unreadCount > 0) {
               <span class="unread">{{ thread.unreadCount }}</span>
             }
           </a>
         }
-      </div>
-    }
-
-    @if (activeTab() === 'status') {
-      <div class="status-list">
-        <article class="my-status">
-          <span class="avatar">AK</span>
-          <div>
-            <strong>My status</strong>
-            <p>Tap to add status update</p>
-          </div>
-        </article>
-        <small>Recent updates</small>
-        @for (story of stories(); track story.id) {
-          <article class="status-row" [style.--status-color]="story.accent">
-            <span class="avatar ring">{{ chat.getUser(story.userId)?.avatar }}</span>
-            <div>
-              <strong>{{ story.title }}</strong>
-              <p>{{ story.postedAt }}</p>
-            </div>
-          </article>
-        }
-      </div>
-    }
-
-    @if (activeTab() === 'calls') {
-      <div class="call-list">
-        @for (thread of threads(); track thread.id) {
-          <article class="call-row">
-            <span class="avatar">{{ thread.avatar }}</span>
-            <div>
-              <strong>{{ thread.title }}</strong>
-              <p>{{ thread.lastMessageAt }} - outgoing</p>
-            </div>
-            <button type="button">Call</button>
-          </article>
-        }
-      </div>
-    }
+      }
+    </div>
   </aside>
 
   <section class="empty-chat">

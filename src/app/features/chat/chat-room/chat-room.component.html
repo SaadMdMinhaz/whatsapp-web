@@ -11,7 +11,7 @@
           <span class="avatar">{{ item.avatar }}</span>
           <div>
             <strong>{{ item.title }}</strong>
-            <p>{{ item.typingUserId ? 'typing...' : item.lastMessage }}</p>
+            <p>{{ item.lastMessage }}</p>
           </div>
           <time>{{ item.lastMessageAt }}</time>
         </a>
@@ -24,44 +24,52 @@
       <span class="avatar">{{ thread()?.avatar }}</span>
       <div>
         <h2>{{ thread()?.title }}</h2>
-        <p>{{ thread()?.typingUserId ? 'typing...' : 'online' }}</p>
+        <p>{{ thread()?.participants?.length }} members</p>
       </div>
       <div class="header-actions">
-        <button type="button">Search</button>
         <button type="button" (click)="chat.toggleArchive(threadId())">Archive</button>
       </div>
     </header>
 
     <div class="message-list">
-      @for (message of messages(); track message.id) {
-        <article class="message" [class.mine]="message.senderId === 'u1'">
-          @if (message.senderId !== 'u1' && thread()?.type === 'group') {
-            <strong>{{ chat.getUser(message.senderId)?.name }}</strong>
+      @for (message of chat.messages(); track message.id) {
+        <article class="message" [class.mine]="isOwnMessage(message.senderId)">
+          @if (!isOwnMessage(message.senderId) && thread()?.type === 'GROUP') {
+            <strong class="sender-name">{{ getSenderName(message.senderId) }}</strong>
           }
-          @if (message.body) {
-            <p>{{ message.body }}</p>
-          }
-          @if (message.attachment) {
-            <div class="attachment">
-              <span>{{ message.attachment.type }}</span>
-              <div>
-                <strong>{{ message.attachment.name }}</strong>
-                <small>{{ message.attachment.duration || message.attachment.size }}</small>
+          @if (message.isDeleted) {
+            <p class="deleted">This message was deleted</p>
+          } @else {
+            @if (message.content) {
+              <p>{{ message.content }}</p>
+            }
+            @if (message.mediaUrl) {
+              <div class="attachment">
+                <span>{{ message.messageType | lowercase }}</span>
+                <div>
+                  <strong>{{ message.mediaFileName || message.messageType }}</strong>
+                  <small>{{ message.mediaFileSize | number }} bytes</small>
+                </div>
               </div>
-            </div>
+            }
           }
           <footer>
-            <span>{{ message.sentAt }}</span>
-            <span>{{ message.status }}</span>
+            <span>{{ formatTime(message.createdAt) }}</span>
+            @if (isOwnMessage(message.senderId)) {
+              <span>{{ formatStatus(message.status) }}</span>
+            }
           </footer>
         </article>
       }
     </div>
 
     <form class="composer" (ngSubmit)="send()">
-      <button type="button" title="Attach file">File</button>
-      <button type="button" title="Record voice note">Voice</button>
-      <textarea [value]="draft()" (input)="updateDraft($event)" placeholder="Type a message"></textarea>
+      <textarea
+        [value]="draft()"
+        (input)="updateDraft($event)"
+        (keydown)="onKeydown($event)"
+        placeholder="Type a message"
+      ></textarea>
       <button class="send" type="submit">Send</button>
     </form>
   </section>

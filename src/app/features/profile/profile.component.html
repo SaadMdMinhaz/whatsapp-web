@@ -1,2 +1,45 @@
-﻿<section class="page-card"><span class="avatar">{{ user()?.avatar }}</span><div><p>Profile</p><h2>{{ user()?.name }}</h2><span>{{ user()?.handle }}</span></div></section>
-<section class="settings-grid"><article><h3>About</h3><p>{{ user()?.about }}</p></article><article><h3>Photo upload</h3><p>Ready for Spring Boot multipart file upload and CDN storage integration.</p></article><article><h3>Security</h3><p>JWT access tokens, refresh token rotation, and device sessions belong in Auth Service.</p></article></section>
+﻿<section class="profile-page">
+  <header class="page-header">
+    <h1>Profile</h1>
+  </header>
+
+  <div class="profile-content">
+    <div class="avatar-section">
+      <span class="avatar-lg">{{ displayName?.charAt(0)?.toUpperCase() || '?' }}</span>
+      <h2>{{ displayName || 'No name set' }}</h2>
+      <p>{{ user()?.email }}</p>
+    </div>
+
+    <form (ngSubmit)="save()" class="profile-form">
+      @if (message()) {
+        <div [class]="message().includes('success') ? 'success-banner' : 'error-banner'">{{ message() }}</div>
+      }
+
+      <label>
+        Phone Number
+        <input type="text" [value]="phoneNumber" disabled class="disabled-input" />
+      </label>
+
+      <label>
+        Username
+        <input type="text" [value]="username" disabled class="disabled-input" />
+      </label>
+
+      <label>
+        Display Name
+        <input type="text" [(ngModel)]="displayName" name="displayName" placeholder="Enter your name" />
+      </label>
+
+      <label>
+        About
+        <input type="text" [(ngModel)]="about" name="about" placeholder="Enter your status" maxlength="500" />
+      </label>
+
+      <button class="primary-action" type="submit" [disabled]="saving()">
+        {{ saving() ? 'Saving...' : 'Save Changes' }}
+      </button>
+    </form>
+
+    <button class="logout-btn" (click)="logout()">Sign Out</button>
+  </div>
+</section>

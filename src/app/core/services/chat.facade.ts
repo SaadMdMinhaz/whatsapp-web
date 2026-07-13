@@ -1,79 +1,182 @@
-﻿import { Injectable, computed, signal } from '@angular/core';
-import { ChatMessage, ChatThread, StoryStatus, UserProfile } from '../models/chat.models';
+﻿import { Injectable, inject, signal, computed } from '@angular/core';
+import { ChatService, ConversationResponse, MessageResponse, SendMessageRequest } from './chat.service';
+import { MediaService } from './media.service';
+import { UserService, UserProfileResponse } from './user.service';
+import { SessionService } from './session.service';
+import { ChatMessage, ChatThread, Participant } from '../models/chat.models';
+import { forkJoin } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class ChatFacade {
-  readonly users = signal<UserProfile[]>([
-    { id: 'u1', name: 'Ayaan Khan', handle: 'user@connectly.dev', role: 'user', avatar: 'AK', about: 'Hey there, I am using Connectly.', online: true, lastSeen: 'Online' },
-    { id: 'u2', name: 'Nadia Rahman', handle: 'nadia@connectly.dev', role: 'user', avatar: 'NR', about: 'Available', online: true, lastSeen: 'Online' },
-    { id: 'u3', name: 'Rafi Chowdhury', handle: 'rafi@connectly.dev', role: 'user', avatar: 'RC', about: 'At work', online: false, lastSeen: 'Last seen 14 min ago' },
-    { id: 'u4', name: 'Mira Sultana', handle: 'mira@connectly.dev', role: 'user', avatar: 'MS', about: 'Battery about to die', online: true, lastSeen: 'Online' },
-    { id: 'u5', name: 'Family Group', handle: 'family@connectly.dev', role: 'user', avatar: 'FG', about: 'Family updates', online: false, lastSeen: 'Today' }
-  ]);
+  private readonly chatService = inject(ChatService);
+  private readonly mediaService = inject(MediaService);
+  private readonly userService = inject(UserService);
+  private readonly session = inject(SessionService);
 
-  readonly stories = signal<StoryStatus[]>([
-    { id: 's1', userId: 'u2', title: 'Nadia Rahman', accent: '#0f766e', postedAt: '12 min ago' },
-    { id: 's2', userId: 'u3', title: 'Rafi Chowdhury', accent: '#2563eb', postedAt: '38 min ago' },
-    { id: 's3', userId: 'u4', title: 'Mira Sultana', accent: '#9333ea', postedAt: '1 hr ago' }
-  ]);
+  readonly threads = signal<ChatThread[]>([]);
+  readonly messages = signal<ChatMessage[]>([]);
+  readonly loading = signal(false);
+  readonly onlineUserIds = signal<Set<string>>(new Set());
 
-  readonly threads = signal<ChatThread[]>([
-    { id: 'c1', type: 'direct', title: 'Nadia Rahman', avatar: 'NR', memberIds: ['u1', 'u2'], unreadCount: 2, archived: false, pinned: true, muted: false, typingUserId: 'u2', lastMessage: 'Typing...', lastMessageAt: '08:34 PM' },
-    { id: 'c2', type: 'group', title: 'Friends Weekend', avatar: 'FW', memberIds: ['u1', 'u2', 'u3', 'u4'], unreadCount: 5, archived: false, pinned: true, muted: false, lastMessage: 'Rafi: I sent the photos', lastMessageAt: '07:58 PM' },
-    { id: 'c3', type: 'direct', title: 'Mira Sultana', avatar: 'MS', memberIds: ['u1', 'u4'], unreadCount: 0, archived: false, pinned: false, muted: true, lastMessage: 'Voice note', lastMessageAt: '06:11 PM' },
-    { id: 'c4', type: 'direct', title: 'Rafi Chowdhury', avatar: 'RC', memberIds: ['u1', 'u3'], unreadCount: 0, archived: false, pinned: false, muted: false, lastMessage: 'Call me when you are free.', lastMessageAt: 'Yesterday' },
-    { id: 'c5', type: 'group', title: 'Family Group', avatar: 'FG', memberIds: ['u1', 'u5'], unreadCount: 0, archived: true, pinned: false, muted: false, lastMessage: 'Dinner at 8?', lastMessageAt: 'Friday' }
-  ]);
+  readonly activeThreads = computed(() =>
+    this.threads().filter((t) => !t.archived)
+  );
 
-  readonly messages = signal<ChatMessage[]>([
-    { id: 'm1', threadId: 'c1', senderId: 'u2', body: 'Are you coming online now?', sentAt: '08:20 PM', status: 'seen' },
-    { id: 'm2', threadId: 'c1', senderId: 'u1', body: 'Yes, I am here. Send me the image.', sentAt: '08:26 PM', status: 'seen' },
-    { id: 'm3', threadId: 'c1', senderId: 'u2', body: 'Typing...', sentAt: '08:34 PM', status: 'delivered' },
-    { id: 'm4', threadId: 'c2', senderId: 'u3', body: 'I sent the photos from yesterday.', sentAt: '07:42 PM', status: 'seen', attachment: { id: 'a1', type: 'image', name: 'weekend-photos.zip', size: '4.2 MB' } },
-    { id: 'm5', threadId: 'c3', senderId: 'u4', body: '', sentAt: '06:11 PM', status: 'delivered', attachment: { id: 'a2', type: 'voice', name: 'voice-note.webm', size: '86 KB', duration: '0:24' } },
-    { id: 'm6', threadId: 'c4', senderId: 'u3', body: 'Call me when you are free.', sentAt: 'Yesterday', status: 'seen' }
-  ]);
+  loadConversations() {
+    this.loading.set(true);
+    this.chatService.getConversations().subscribe({
+      next: (convos) => {
+        this.threads.set(convos.map((c) => this.mapConversation(c)));
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
+    });
+  }
 
-  readonly activeThreads = computed(() => this.threads().filter((thread) => !thread.archived));
-  readonly archivedThreads = computed(() => this.threads().filter((thread) => thread.archived));
-  readonly onlineUsers = computed(() => this.users().filter((user) => user.online));
+  loadMessages(conversationId: string, page = 0, size = 30) {
+    this.chatService.getMessages(conversationId, page, size).subscribe({
+      next: (pageData) => {
+        if (page === 0) {
+          this.messages.set(pageData.messages.map((m) => this.mapMessage(m)));
+        } else {
+          this.messages.update((prev) => [
+            ...pageData.messages.map((m) => this.mapMessage(m)),
+            ...prev,
+          ]);
+        }
+      },
+    });
+  }
+
+  sendMessage(conversationId: string, content: string) {
+    const request: SendMessageRequest = { content, messageType: 'TEXT' };
+    this.chatService.sendMessage(conversationId, request).subscribe({
+      next: (msg) => {
+        this.messages.update((prev) => [...prev, this.mapMessage(msg)]);
+        this.threads.update((threads) =>
+          threads.map((t) =>
+            t.id === conversationId
+              ? { ...t, lastMessage: content, lastMessageAt: this.formatTime(msg.createdAt) }
+              : t
+          )
+        );
+      },
+    });
+  }
+
+  createConversation(recipientUserId: string) {
+    return this.chatService.createConversation(recipientUserId);
+  }
+
+  markAsRead(conversationId: string) {
+    this.chatService.markAsRead(conversationId).subscribe();
+    this.threads.update((threads) =>
+      threads.map((t) =>
+        t.id === conversationId ? { ...t, unreadCount: 0 } : t
+      )
+    );
+  }
+
+  handleIncomingMessage(msg: MessageResponse) {
+    const mapped = this.mapMessage(msg);
+    this.messages.update((prev) => {
+      if (prev.find((m) => m.id === msg.id)) return prev;
+      return [...prev, mapped];
+    });
+    this.threads.update((threads) =>
+      threads.map((t) =>
+        t.id === msg.conversationId
+          ? {
+              ...t,
+              lastMessage: msg.content || `[${msg.messageType}]`,
+              lastMessageAt: this.formatTime(msg.createdAt),
+              unreadCount: t.id === msg.conversationId ? t.unreadCount + 1 : t.unreadCount,
+            }
+          : t
+      )
+    );
+  }
+
+  handlePresence(userId: string, online: boolean) {
+    this.onlineUserIds.update((set) => {
+      const next = new Set(set);
+      if (online) next.add(userId);
+      else next.delete(userId);
+      return next;
+    });
+  }
 
   getThread(threadId: string): ChatThread | undefined {
-    return this.threads().find((thread) => thread.id === threadId);
+    return this.threads().find((t) => t.id === threadId);
   }
 
-  getMessages(threadId: string): ChatMessage[] {
-    return this.messages().filter((message) => message.threadId === threadId);
+  getUserDisplayName(userId: string): string {
+    const thread = this.threads().find((t) =>
+      t.participants.some((p) => p.userId === userId)
+    );
+    const participant = thread?.participants.find((p) => p.userId === userId);
+    return participant?.displayName || 'Unknown';
   }
 
-  getUser(userId: string): UserProfile | undefined {
-    return this.users().find((user) => user.id === userId);
+  toggleArchive(threadId: string) {
+    this.threads.update((threads) =>
+      threads.map((t) =>
+        t.id === threadId ? { ...t, archived: !t.archived } : t
+      )
+    );
   }
 
-  sendMessage(threadId: string, body: string): void {
-    const message: ChatMessage = {
-      id: crypto.randomUUID(),
-      threadId,
-      senderId: 'u1',
-      body,
-      sentAt: new Intl.DateTimeFormat('en', { hour: '2-digit', minute: '2-digit' }).format(new Date()),
-      status: 'sent'
+  private mapConversation(c: ConversationResponse): ChatThread {
+    const currentUserId = this.session.currentUser()?.id;
+    const otherParticipant = c.participants.find((p) => p.userId !== currentUserId);
+    const title = c.type === 'DIRECT' && otherParticipant
+      ? otherParticipant.displayName
+      : c.name || 'Group Chat';
+    const avatar = title
+      .split(' ')
+      .map((w) => w[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+
+    return {
+      id: c.id,
+      type: c.type,
+      title,
+      avatar,
+      memberIds: c.participants.map((p) => p.userId),
+      unreadCount: c.unreadCount || 0,
+      lastMessage: c.lastMessage
+        ? c.lastMessage.content || `[${c.lastMessage.messageType}]`
+        : '',
+      lastMessageAt: c.lastMessage ? this.formatTime(c.lastMessage.createdAt) : '',
+      lastMessageSenderId: c.lastMessage?.senderId || '',
+      participants: c.participants,
     };
-    this.messages.update((messages) => [...messages, message]);
-    this.threads.update((threads) => threads.map((thread) => thread.id === threadId ? { ...thread, lastMessage: body, lastMessageAt: message.sentAt, unreadCount: 0, typingUserId: undefined } : thread));
-    window.setTimeout(() => this.updateMessageStatus(message.id, 'delivered'), 700);
-    window.setTimeout(() => this.updateMessageStatus(message.id, 'seen'), 1400);
   }
 
-  toggleArchive(threadId: string): void {
-    this.threads.update((threads) => threads.map((thread) => thread.id === threadId ? { ...thread, archived: !thread.archived } : thread));
+  private mapMessage(m: MessageResponse): ChatMessage {
+    return {
+      id: m.id,
+      conversationId: m.conversationId,
+      senderId: m.senderId,
+      content: m.content || '',
+      messageType: m.messageType,
+      mediaUrl: m.mediaUrl,
+      mediaFileName: m.mediaFileName,
+      mediaFileSize: m.mediaFileSize,
+      replyToMessageId: m.replyToMessageId,
+      isEdited: m.isEdited,
+      isDeleted: m.isDeleted,
+      status: m.status,
+      createdAt: m.createdAt,
+      updatedAt: m.updatedAt,
+    };
   }
 
-  blockUser(userId: string): void {
-    this.users.update((users) => users.map((user) => user.id === userId ? { ...user, blocked: !user.blocked, online: false } : user));
-  }
-
-  private updateMessageStatus(messageId: string, status: ChatMessage['status']): void {
-    this.messages.update((messages) => messages.map((message) => message.id === messageId ? { ...message, status } : message));
+  private formatTime(dateStr: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
   }
 }

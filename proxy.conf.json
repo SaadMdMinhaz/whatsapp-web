@@ -1,0 +1,27 @@
+{
+  "/api/v1/auth/": {
+    "target": "http://localhost:8080",
+    "secure": false
+  },
+  "/api/v1/users/": {
+    "target": "http://localhost:8081",
+    "secure": false
+  },
+  "/api/v1/chats/": {
+    "target": "http://localhost:8082",
+    "secure": false
+  },
+  "/api/v1/media/": {
+    "target": "http://localhost:8083",
+    "secure": false
+  },
+  "/api/v1/gateway/": {
+    "target": "http://localhost:8084",
+    "secure": false
+  },
+  "/ws": {
+    "target": "http://localhost:8084",
+    "secure": false,
+    "ws": true
+  }
+}

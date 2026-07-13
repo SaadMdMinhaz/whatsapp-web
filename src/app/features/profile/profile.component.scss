@@ -1,1 +1,130 @@
-﻿@use '../shared-page';
+﻿.profile-page {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: #ffffff;
+  overflow: auto;
+}
+
+.page-header {
+  padding: 1.05rem 1.5rem 0.75rem;
+  background: #f0f4f2;
+  border-bottom: 1px solid #e7eeeb;
+}
+
+h1 {
+  margin: 0;
+  color: #111b21;
+  font-size: 1.55rem;
+}
+
+.profile-content {
+  padding: 2rem;
+  max-width: 560px;
+}
+
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.avatar-lg {
+  width: 6rem;
+  height: 6rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #0f766e;
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+h2 {
+  margin: 0;
+  color: #111b21;
+}
+
+.avatar-section p {
+  color: #667781;
+  margin: 0;
+}
+
+.profile-form {
+  display: grid;
+  gap: 1rem;
+}
+
+label {
+  display: grid;
+  gap: 0.45rem;
+  color: #354641;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+input {
+  height: 3rem;
+  border: 1px solid #d5e1dd;
+  border-radius: 0.75rem;
+  padding: 0 1rem;
+  font: inherit;
+  background: #fff;
+  color: #111b21;
+}
+
+input:focus {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.14);
+  outline: none;
+}
+
+.disabled-input {
+  background: #f0f4f2;
+  color: #667781;
+  cursor: not-allowed;
+}
+
+button {
+  min-height: 2.65rem;
+  border: 0;
+  border-radius: 0.75rem;
+  padding: 0 1rem;
+  background: #0f766e;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.logout-btn {
+  margin-top: 1.5rem;
+  background: #dc2626;
+}
+
+.success-banner {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: #f0fdf4;
+  color: #16a34a;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1px solid #bbf7d0;
+}
+
+.error-banner {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: #fef2f2;
+  color: #dc2626;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1px solid #fecaca;
+}

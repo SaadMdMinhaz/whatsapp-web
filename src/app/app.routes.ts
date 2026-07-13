@@ -7,6 +7,7 @@ import { ChatRoomComponent } from './features/chat/chat-room/chat-room.component
 import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { ProfileComponent } from './features/profile/profile.component';
 import { SettingsComponent } from './features/settings/settings.component';
+import { ContactsComponent } from './features/contacts/contacts.component';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -20,9 +21,10 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'chats' },
       { path: 'chats', component: ChatListComponent },
       { path: 'chats/:chatId', component: ChatRoomComponent },
+      { path: 'contacts', component: ContactsComponent },
       { path: 'profile', component: ProfileComponent },
-      { path: 'settings', component: SettingsComponent }
-    ]
+      { path: 'settings', component: SettingsComponent },
+    ],
   },
-  { path: '**', redirectTo: 'login' }
+  { path: '**', redirectTo: 'login' },
 ];

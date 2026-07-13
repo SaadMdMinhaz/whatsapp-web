@@ -8,16 +8,33 @@ import { SessionService } from '../../../core/services/session.service';
   standalone: true,
   imports: [FormsModule, RouterLink],
   templateUrl: './register.component.html',
-  styleUrl: './register.component.scss'
+  styleUrl: './register.component.scss',
 })
 export class RegisterComponent {
-  name = 'Ayaan Khan';
-  email = 'user@connectly.dev';
-  password = 'password';
+  name = '';
+  email = '';
+  password = '';
+  confirmPassword = '';
+  error = '';
+  loading = false;
 
   constructor(private readonly session: SessionService) {}
 
-  submit(): void {
-    this.session.register(this.name, this.email);
+  submit() {
+    this.error = '';
+    if (this.password !== this.confirmPassword) {
+      this.error = 'Passwords do not match';
+      return;
+    }
+    this.loading = true;
+    this.session.register(this.name, this.email, this.password).subscribe({
+      next: () => {
+        this.loading = false;
+      },
+      error: (err) => {
+        this.error = err.error?.detail || err.error?.message || 'Registration failed. Please try again.';
+        this.loading = false;
+      },
+    });
   }
 }

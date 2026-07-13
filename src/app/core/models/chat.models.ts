@@ -1,21 +1,25 @@
-﻿export type MessageStatus = 'sent' | 'delivered' | 'seen';
-export type AttachmentType = 'image' | 'file' | 'voice';
+﻿export type MessageStatus = 'SENT' | 'DELIVERED' | 'READ';
+export type MessageType = 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'AUDIO';
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+}
 
 export interface UserProfile {
   id: string;
-  name: string;
-  handle: string;
-  role: 'user' | 'admin';
-  avatar: string;
+  displayName: string;
+  username: string;
   about: string;
-  online: boolean;
-  lastSeen: string;
-  blocked?: boolean;
+  profilePictureUrl: string;
+  phoneNumber: string;
+  active: boolean;
 }
 
 export interface MessageAttachment {
   id: string;
-  type: AttachmentType;
+  type: 'image' | 'file' | 'voice' | 'video' | 'audio';
   name: string;
   size: string;
   previewUrl?: string;
@@ -24,28 +28,41 @@ export interface MessageAttachment {
 
 export interface ChatMessage {
   id: string;
-  threadId: string;
+  conversationId: string;
   senderId: string;
-  body: string;
-  sentAt: string;
+  content: string;
+  messageType: MessageType;
+  mediaUrl: string;
+  mediaFileName: string;
+  mediaFileSize: number;
+  replyToMessageId: string;
+  isEdited: boolean;
+  isDeleted: boolean;
   status: MessageStatus;
-  attachment?: MessageAttachment;
-  deleted?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Participant {
+  id: string;
+  userId: string;
+  displayName: string;
+  username: string;
+  profilePictureUrl: string;
 }
 
 export interface ChatThread {
   id: string;
-  type: 'direct' | 'group';
+  type: 'DIRECT' | 'GROUP';
   title: string;
   avatar: string;
   memberIds: string[];
   unreadCount: number;
-  archived: boolean;
-  pinned: boolean;
-  muted: boolean;
-  typingUserId?: string;
   lastMessage: string;
   lastMessageAt: string;
+  lastMessageSenderId: string;
+  typingUserId?: string;
+  participants: Participant[];
 }
 
 export interface StoryStatus {

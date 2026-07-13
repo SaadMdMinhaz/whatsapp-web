@@ -1,0 +1,56 @@
+<section class="contacts-page">
+  <header class="pane-header">
+    <h1>Contacts</h1>
+    <div class="header-actions">
+      <button type="button" title="Add contact" (click)="toggleAdd()">{{ showAdd() ? 'Close' : 'Add' }}</button>
+    </div>
+  </header>
+
+  @if (showAdd()) {
+    <div class="add-panel">
+      <label class="search-box">
+        <span>Search users to add</span>
+        <input type="search" placeholder="Search by name or email" (input)="searchUsers($event)" [value]="searchQuery()" autofocus />
+      </label>
+      @if (searchResults().length > 0) {
+        <div class="search-results">
+          @for (user of searchResults(); track user.id) {
+            <div class="search-result-row">
+              <span class="avatar">{{ user.displayName?.charAt(0) || '?' }}</span>
+              <div class="result-info">
+                <strong>{{ user.displayName || user.username }}</strong>
+                <p>{{ user.about || user.phoneNumber }}</p>
+              </div>
+              <button class="add-btn" (click)="addContact(user.id)">Add</button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <div class="contacts-list">
+    @if (loading()) {
+      <div class="empty-state">Loading contacts...</div>
+    } @else if (contacts().length === 0) {
+      <div class="empty-state">
+        <p>No contacts yet</p>
+        <p>Click "Add" to find people</p>
+      </div>
+    } @else {
+      @for (contact of contacts(); track contact.id) {
+        <div class="contact-row">
+          <span class="avatar">{{ contact.displayName?.charAt(0) || '?' }}</span>
+          <div class="contact-info">
+            <strong>{{ contact.displayName || contact.nickname || 'Unknown' }}</strong>
+            <p>{{ contact.contactUserId }}</p>
+          </div>
+          <div class="contact-actions">
+            <button class="chat-btn" (click)="startChat(contact.contactUserId)">Chat</button>
+            <button class="remove-btn" (click)="removeContact(contact.id)">Remove</button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</section>

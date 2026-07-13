@@ -3,14 +3,27 @@
     <div class="brand-mark">C</div>
     <p class="eyebrow">Create workspace</p>
     <h1>Start your secure chat app</h1>
-    <p class="lede">Register an admin user and enter the dashboard designed for real-time communication workflows.</p>
+    <p class="lede">Register and enter the dashboard designed for real-time communication workflows.</p>
     <form (ngSubmit)="submit()" class="auth-form">
-      <label>Full name<input [(ngModel)]="name" name="name" autocomplete="name" required /></label>
-      <label>Email<input [(ngModel)]="email" name="email" type="email" autocomplete="email" required /></label>
-      <label>Password<input [(ngModel)]="password" name="password" type="password" autocomplete="new-password" required /></label>
-      <button class="primary-action" type="submit">Create account</button>
+      @if (error) {
+        <div class="error-banner">{{ error }}</div>
+      }
+      <label>Full name<input [(ngModel)]="name" name="name" autocomplete="name" required placeholder="Enter your full name" /></label>
+      <label>Email<input [(ngModel)]="email" name="email" type="email" autocomplete="email" required placeholder="Enter your email" /></label>
+      <label>Password<input [(ngModel)]="password" name="password" type="password" autocomplete="new-password" required placeholder="Create a password" /></label>
+      <label>Confirm password<input [(ngModel)]="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" required placeholder="Confirm your password" /></label>
+      <button class="primary-action" type="submit" [disabled]="loading">
+        {{ loading ? 'Creating account...' : 'Create account' }}
+      </button>
     </form>
     <p class="switch-copy">Already registered? <a routerLink="/login">Login</a></p>
   </section>
-  <aside class="auth-visual"><div class="metrics-grid"><article><strong>JWT</strong><span>Access and refresh flow</span></article><article><strong>STOMP</strong><span>Live messaging ready</span></article><article><strong>Kafka</strong><span>Event-driven backend plan</span></article><article><strong>Admin</strong><span>Moderation controls</span></article></div></aside>
+  <aside class="auth-visual">
+    <div class="metrics-grid">
+      <article><strong>JWT</strong><span>Access and refresh flow</span></article>
+      <article><strong>STOMP</strong><span>Live messaging ready</span></article>
+      <article><strong>WebSocket</strong><span>Real-time events</span></article>
+      <article><strong>Microservices</strong><span>Scalable architecture</span></article>
+    </div>
+  </aside>
 </main>
