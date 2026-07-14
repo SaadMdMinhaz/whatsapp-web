@@ -65,7 +65,7 @@ export class WebSocketService {
       },
 
       onStompError: (frame) => {
-        console.error('[WS] STOMP error:', frame.headers?.message || frame.body);
+        console.error('[WS] STOMP error:', frame.headers?.['message'] || frame.body);
       },
 
       onWebSocketClose: () => {

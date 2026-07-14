@@ -1,6 +1,7 @@
 ﻿import { Component, computed, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { LowerCasePipe, DecimalPipe } from '@angular/common';
 import { ChatFacade } from '../../../core/services/chat.facade';
 import { WebSocketService } from '../../../core/services/websocket.service';
 import { SessionService } from '../../../core/services/session.service';
@@ -9,7 +10,7 @@ import { MessageResponse } from '../../../core/services/chat.service';
 @Component({
   selector: 'app-chat-room',
   standalone: true,
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, LowerCasePipe, DecimalPipe],
   templateUrl: './chat-room.component.html',
   styleUrl: './chat-room.component.scss',
 })

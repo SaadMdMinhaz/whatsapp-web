@@ -151,6 +151,7 @@ export class ChatFacade {
         : '',
       lastMessageAt: c.lastMessage ? this.formatTime(c.lastMessage.createdAt) : '',
       lastMessageSenderId: c.lastMessage?.senderId || '',
+      archived: false,
       participants: c.participants,
     };
   }

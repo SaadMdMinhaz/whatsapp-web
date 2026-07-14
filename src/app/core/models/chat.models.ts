@@ -61,6 +61,7 @@ export interface ChatThread {
   lastMessage: string;
   lastMessageAt: string;
   lastMessageSenderId: string;
+  archived: boolean;
   typingUserId?: string;
   participants: Participant[];
 }
