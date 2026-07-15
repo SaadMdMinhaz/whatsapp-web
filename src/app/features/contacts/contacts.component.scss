@@ -10,66 +10,73 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1.05rem 1rem 0.75rem;
+  padding: 0.75rem 1rem;
   background: #f0f4f2;
 }
 
 h1 {
   margin: 0;
   color: #111b21;
-  font-size: 1.55rem;
+  font-size: 1.2rem;
+  font-weight: 700;
 }
 
 .header-actions {
   display: flex;
-  gap: 0.45rem;
+  gap: 0.25rem;
 }
 
-button {
-  min-height: 2.3rem;
+.header-actions button {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
   border: 0;
   border-radius: 999px;
-  padding: 0 0.85rem;
-  background: #e1ece7;
-  color: #0f5f59;
-  font-weight: 800;
+  background: transparent;
+  color: #54656f;
   cursor: pointer;
 }
 
-button:hover {
-  background: #0f766e;
-  color: #ffffff;
+.header-actions button:hover {
+  background: #d9e4df;
 }
 
 .add-panel {
-  border-bottom: 1px solid #e7eeeb;
-  background: #f0f4f2;
+  border-bottom: 1px solid #edf2f0;
+  background: #ffffff;
 }
 
 .search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+}
+
+.search-icon {
   display: grid;
-  gap: 0.35rem;
-  padding: 0.85rem 1rem;
-  color: #667781;
-  font-size: 0.8rem;
-  font-weight: 700;
+  place-items: center;
+  color: #8696a0;
+  flex-shrink: 0;
 }
 
 .search-box input {
-  height: 2.65rem;
+  height: 2.25rem;
   border: 0;
-  border-radius: 0.7rem;
-  padding: 0 1rem;
-  background: #ffffff;
+  border-radius: 0.5rem;
+  padding: 0 0.75rem;
+  background: #f0f4f2;
   color: #111b21;
   font: inherit;
+  font-size: 0.9rem;
+  flex: 1;
+  outline: none;
 }
 
 .search-results {
   max-height: 250px;
   overflow: auto;
-  background: #ffffff;
 }
 
 .search-result-row {
@@ -77,25 +84,35 @@ button:hover {
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 0.85rem;
   align-items: center;
-  padding: 0.82rem 1rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid #edf2f0;
 }
 
 .result-info strong {
   color: #111b21;
+  font-size: 0.95rem;
 }
 
 .result-info p {
-  margin: 0.25rem 0 0;
+  margin: 0.2rem 0 0;
   color: #667781;
   font-size: 0.85rem;
 }
 
 .add-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
   background: #0f766e;
   color: #ffffff;
-  font-size: 0.8rem;
-  padding: 0 0.7rem;
+  cursor: pointer;
+}
+
+.add-btn:hover {
+  background: #0d9488;
 }
 
 .contacts-list {
@@ -108,7 +125,7 @@ button:hover {
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 0.85rem;
   align-items: center;
-  padding: 0.82rem 1rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid #edf2f0;
 }
 
@@ -118,29 +135,46 @@ button:hover {
 
 .contact-info strong {
   color: #111b21;
+  font-size: 0.95rem;
 }
 
 .contact-info p {
-  margin: 0.25rem 0 0;
+  margin: 0.2rem 0 0;
   color: #667781;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
 }
 
 .contact-actions {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.25rem;
+}
+
+.contact-actions button {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
 }
 
 .chat-btn {
   background: transparent;
   color: #0f766e;
-  font-size: 0.8rem;
+}
+
+.chat-btn:hover {
+  background: #e9f3ef;
 }
 
 .remove-btn {
   background: transparent;
   color: #dc2626;
-  font-size: 0.8rem;
+}
+
+.remove-btn:hover {
+  background: #fef2f2;
 }
 
 .avatar {
@@ -151,15 +185,20 @@ button:hover {
   border-radius: 999px;
   background: #0f766e;
   color: #fff;
-  font-weight: 800;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
 }
 
 .empty-state {
-  padding: 2rem 1rem;
+  padding: 3rem 1rem;
   text-align: center;
-  color: #667781;
+  color: #8696a0;
+  display: grid;
+  gap: 0.5rem;
+  justify-items: center;
 }
 
 .empty-state p {
-  margin: 0.25rem 0;
+  margin: 0;
 }

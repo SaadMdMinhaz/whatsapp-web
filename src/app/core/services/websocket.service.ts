@@ -23,6 +23,54 @@ export interface ReadMessage {
 export class WebSocketService {
   private client: Client | null = null;
   private conversationSubscriptions = new Map<string, StompSubscription>();
+  private callSubscriptions = new Map<string, StompSubscription>();
+
+  subscribe(topic: string, callback: (msg: any) => void): StompSubscription | undefined {
+    if (this.client?.connected) {
+      const sub = this.client.subscribe(topic, (message: IMessage) => {
+        callback(JSON.parse(message.body));
+      });
+      return sub;
+    }
+    return undefined;
+  }
+
+  subscribeToCallOffer(conversationId: string, callback: (msg: any) => void) {
+    const key = `offer:${conversationId}`;
+    this.callSubscriptions.get(key)?.unsubscribe();
+    const sub = this.subscribe(`/topic/call.offer.${conversationId}`, callback);
+    if (sub) this.callSubscriptions.set(key, sub);
+  }
+
+  subscribeToCallAnswer(conversationId: string, callback: (msg: any) => void) {
+    const key = `answer:${conversationId}`;
+    this.callSubscriptions.get(key)?.unsubscribe();
+    const sub = this.subscribe(`/topic/call.answer.${conversationId}`, callback);
+    if (sub) this.callSubscriptions.set(key, sub);
+  }
+
+  subscribeToIceCandidate(conversationId: string, callback: (msg: any) => void) {
+    const key = `ice:${conversationId}`;
+    this.callSubscriptions.get(key)?.unsubscribe();
+    const sub = this.subscribe(`/topic/call.iceCandidate.${conversationId}`, callback);
+    if (sub) this.callSubscriptions.set(key, sub);
+  }
+
+  subscribeToCallEnd(conversationId: string, callback: (msg: any) => void) {
+    const key = `end:${conversationId}`;
+    this.callSubscriptions.get(key)?.unsubscribe();
+    const sub = this.subscribe(`/topic/call.end.${conversationId}`, callback);
+    if (sub) this.callSubscriptions.set(key, sub);
+  }
+
+  unsubscribeCallTopic(conversationId: string) {
+    for (const [key, sub] of this.callSubscriptions) {
+      if (key.endsWith(`:${conversationId}`)) {
+        sub.unsubscribe();
+        this.callSubscriptions.delete(key);
+      }
+    }
+  }
 
   connect(
     token: string,
@@ -108,6 +156,28 @@ export class WebSocketService {
         destination: `/app/chat.markRead.${conversationId}`,
         body: '',
       });
+    }
+  }
+
+  sendCallOffer(conversationId: string, sdp: string) {
+    this.publish(`/app/call.offer.${conversationId}`, { callerId: '', sdp });
+  }
+
+  sendCallAnswer(conversationId: string, sdp: string) {
+    this.publish(`/app/call.answer.${conversationId}`, { calleeId: '', sdp });
+  }
+
+  sendIceCandidate(conversationId: string, candidate: string, sdpMid: string, sdpMLineIndex: number) {
+    this.publish(`/app/call.iceCandidate.${conversationId}`, { senderId: '', candidate, sdpMid, sdpMLineIndex });
+  }
+
+  sendCallEnd(conversationId: string) {
+    this.publish(`/app/call.end.${conversationId}`, { userId: '' });
+  }
+
+  private publish(destination: string, body: any) {
+    if (this.client?.connected) {
+      this.client.publish({ destination, body: JSON.stringify(body) });
     }
   }
 

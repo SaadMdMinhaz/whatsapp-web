@@ -1,2 +1,49 @@
-﻿<section class="page-card"><div><p>Settings</p><h2>Workspace preferences</h2><span>Controls prepared for user preferences API and Redis-backed presence cache.</span></div></section>
-<section class="settings-grid"><article><h3>Dark mode</h3><p>Switch the app shell into a darker professional theme.</p><button type="button" (click)="toggleDarkMode()">{{ darkMode() ? 'Disable' : 'Enable' }}</button></article><article><h3>Notifications</h3><p>Future integration point for browser push and backend notification service.</p><button type="button" (click)="toggleNotifications()">{{ notifications() ? 'On' : 'Off' }}</button></article><article><h3>Privacy</h3><p>Seen receipts, online status, story visibility, and blocked users belong here.</p></article></section>
+﻿<section class="settings-page">
+  <header class="page-header">
+    <h1>Settings</h1>
+  </header>
+
+  <div class="settings-list">
+    <article class="setting-item" (click)="toggleDarkMode()">
+      <div class="setting-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4m8.94 3A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2h-2.06ZM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7Z"/>
+        </svg>
+      </div>
+      <div class="setting-info">
+        <strong>Dark mode</strong>
+        <p>{{ darkMode() ? 'On' : 'Off' }}</p>
+      </div>
+      <span class="toggle" [class.active]="darkMode()">
+        <span class="toggle-knob"></span>
+      </span>
+    </article>
+
+    <article class="setting-item" (click)="toggleNotifications()">
+      <div class="setting-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2Z"/>
+        </svg>
+      </div>
+      <div class="setting-info">
+        <strong>Notifications</strong>
+        <p>{{ notifications() ? 'On' : 'Off' }}</p>
+      </div>
+      <span class="toggle" [class.active]="notifications()">
+        <span class="toggle-knob"></span>
+      </span>
+    </article>
+
+    <article class="setting-item">
+      <div class="setting-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+        </svg>
+      </div>
+      <div class="setting-info">
+        <strong>Privacy</strong>
+        <p>Seen receipts, online status, blocked users</p>
+      </div>
+    </article>
+  </div>
+</section>

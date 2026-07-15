@@ -44,7 +44,6 @@ export interface ChatMessage {
 }
 
 export interface Participant {
-  id: string;
   userId: string;
   displayName: string;
   username: string;
@@ -63,13 +62,5 @@ export interface ChatThread {
   lastMessageSenderId: string;
   archived: boolean;
   typingUserId?: string;
-  participants: Participant[];
-}
-
-export interface StoryStatus {
-  id: string;
-  userId: string;
-  title: string;
-  accent: string;
-  postedAt: string;
+  otherUser: Participant;
 }

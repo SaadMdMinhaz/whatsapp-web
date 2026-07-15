@@ -1,10 +1,9 @@
 ﻿import { Component, computed, inject, signal, OnInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ChatFacade } from '../../../core/services/chat.facade';
-import { UserService } from '../../../core/services/user.service';
+import { UserService, UserProfileResponse } from '../../../core/services/user.service';
 import { SessionService } from '../../../core/services/session.service';
-import { UserProfileResponse } from '../../../core/services/user.service';
 
 @Component({
   selector: 'app-chat-list',
@@ -17,11 +16,18 @@ export class ChatListComponent implements OnInit {
   readonly chat = inject(ChatFacade);
   private readonly userService = inject(UserService);
   private readonly session = inject(SessionService);
+  private readonly router = inject(Router);
 
   readonly query = signal('');
   readonly showNewChat = signal(false);
   readonly searchQuery = signal('');
   readonly searchResults = signal<UserProfileResponse[]>([]);
+
+  readonly showCreateGroup = signal(false);
+  readonly groupName = signal('');
+  readonly groupSearchQuery = signal('');
+  readonly groupSearchResults = signal<UserProfileResponse[]>([]);
+  readonly selectedMembers = signal<UserProfileResponse[]>([]);
 
   readonly threads = computed(() => {
     const term = this.query().trim().toLowerCase();
@@ -41,8 +47,17 @@ export class ChatListComponent implements OnInit {
 
   toggleNewChat() {
     this.showNewChat.update((v) => !v);
+    this.showCreateGroup.set(false);
     this.searchQuery.set('');
     this.searchResults.set([]);
+  }
+
+  toggleCreateGroup() {
+    this.showCreateGroup.update((v) => !v);
+    this.groupName.set('');
+    this.groupSearchQuery.set('');
+    this.groupSearchResults.set([]);
+    this.selectedMembers.set([]);
   }
 
   searchUsers(event: Event) {
@@ -66,7 +81,55 @@ export class ChatListComponent implements OnInit {
         this.showNewChat.set(false);
         this.searchQuery.set('');
         this.searchResults.set([]);
-        this.chat.loadConversations();
+        this.router.navigate(['/app/chats', convo.id]);
+      },
+    });
+  }
+
+  searchGroupMembers(event: Event) {
+    const q = (event.target as HTMLInputElement).value;
+    this.groupSearchQuery.set(q);
+    if (q.length < 2) {
+      this.groupSearchResults.set([]);
+      return;
+    }
+    this.userService.searchUsers(q).subscribe({
+      next: (users) => {
+        const currentUserId = this.session.currentUser()?.id;
+        const alreadySelected = new Set(this.selectedMembers().map((m) => m.id));
+        this.groupSearchResults.set(
+          users.filter((u) => u.id !== currentUserId && !alreadySelected.has(u.id))
+        );
+      },
+    });
+  }
+
+  addMember(user: UserProfileResponse) {
+    this.selectedMembers.update((prev) => [...prev, user]);
+    this.groupSearchResults.set([]);
+    this.groupSearchQuery.set('');
+  }
+
+  removeMember(userId: string) {
+    this.selectedMembers.update((prev) => prev.filter((m) => m.id !== userId));
+  }
+
+  updateGroupName(event: Event) {
+    this.groupName.set((event.target as HTMLInputElement).value);
+  }
+
+  createGroup() {
+    const name = this.groupName().trim();
+    const members = this.selectedMembers();
+    if (!name || members.length === 0) return;
+
+    this.chat.createGroup(name, members.map((m) => m.id)).subscribe({
+      next: (convo) => {
+        this.showCreateGroup.set(false);
+        this.showNewChat.set(false);
+        this.groupName.set('');
+        this.selectedMembers.set([]);
+        this.router.navigate(['/app/chats', convo.id]);
       },
     });
   }

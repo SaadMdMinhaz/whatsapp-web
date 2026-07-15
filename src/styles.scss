@@ -1,7 +1,7 @@
 ﻿:root {
     color-scheme: light;
-    font-family: Arial, Helvetica, sans-serif;
-    background: #e7eeeb;
+    font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+    background: #efeae2;
     color: #111b21;
 }
 
@@ -9,8 +9,7 @@
     box-sizing: border-box;
 }
 
-html,
-body {
+html, body {
     width: 100%;
     min-height: 100%;
     margin: 0;
@@ -18,13 +17,15 @@ body {
 }
 
 body {
-    background: #e7eeeb;
+    background: #efeae2;
 }
 
-button,
-input,
-textarea {
+button, input, textarea {
     font: inherit;
+}
+
+a {
+    color: inherit;
 }
 
 .dark-theme {

@@ -1,9 +1,9 @@
 ﻿.auth-page {
     min-height: 100vh;
     display: grid;
-    grid-template-columns: minmax(320px, 520px) 1fr;
-    background: radial-gradient(circle at 80% 12%, rgba(22, 163, 74, 0.18), transparent 26rem), linear-gradient(135deg, #f8fafc 0%, #eef6f3 42%, #f4f7fb 100%);
-    color: #10201c;
+    grid-template-columns: 1fr minmax(380px, 520px);
+    background: #f0f4f2;
+    color: #111b21;
 }
 
 .auth-panel {
@@ -11,8 +11,8 @@
     flex-direction: column;
     justify-content: center;
     padding: clamp(2rem, 6vw, 5rem);
-    background: rgba(255, 255, 255, 0.78);
-    backdrop-filter: blur(18px);
+    background: #ffffff;
+    order: 2;
 }
 
 .brand-mark {
@@ -23,27 +23,21 @@
     border-radius: 0.75rem;
     background: #0f766e;
     color: #fff;
-    font-weight: 800;
     margin-bottom: 1.5rem;
 }
 
-.eyebrow {
-    color: #0f766e;
-    font-weight: 800;
-    text-transform: uppercase;
-    font-size: 0.78rem;
-}
-
 h1 {
-    font-size: clamp(2.25rem, 6vw, 4rem);
-    line-height: 1;
-    margin: 0.25rem 0 1rem;
-    letter-spacing: 0;
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    line-height: 1.2;
+    margin: 0 0 0.5rem;
+    color: #111b21;
 }
 
 .lede {
-    color: #52635e;
+    color: #667781;
     max-width: 34rem;
+    margin: 0;
+    font-size: 0.95rem;
 }
 
 .auth-form {
@@ -55,44 +49,69 @@ h1 {
 label {
     display: grid;
     gap: 0.45rem;
-    color: #354641;
-    font-weight: 700;
+    color: #111b21;
+    font-weight: 600;
+    font-size: 0.9rem;
 }
 
 input {
-    height: 3.25rem;
+    height: 3rem;
     border: 1px solid #d5e1dd;
-    border-radius: 0.75rem;
+    border-radius: 0.5rem;
     padding: 0 1rem;
     font: inherit;
     background: #fff;
-    color: #10201c;
+    color: #111b21;
+    transition: border-color 0.15s;
 }
 
 input:focus {
     border-color: #0f766e;
-    box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.14);
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
     outline: none;
 }
 
 .primary-action {
-    height: 3.25rem;
+    height: 3rem;
     border: 0;
-    border-radius: 0.75rem;
+    border-radius: 0.5rem;
     background: #0f766e;
     color: #fff;
-    font-weight: 800;
+    font-weight: 700;
+    font-size: 0.95rem;
     cursor: pointer;
+    transition: background 0.15s;
+}
+
+.primary-action:hover {
+    background: #0d9488;
+}
+
+.primary-action:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.switch-copy {
+    text-align: center;
+    margin-top: 1.5rem;
+    color: #667781;
+    font-size: 0.9rem;
 }
 
 .switch-copy a {
     color: #0f766e;
-    font-weight: 800;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.switch-copy a:hover {
+    text-decoration: underline;
 }
 
 .error-banner {
     padding: 0.75rem 1rem;
-    border-radius: 0.75rem;
+    border-radius: 0.5rem;
     background: #fef2f2;
     color: #dc2626;
     font-weight: 600;
@@ -100,75 +119,93 @@ input:focus {
     border: 1px solid #fecaca;
 }
 
-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
 .auth-visual {
     display: grid;
     place-items: center;
-    padding: clamp(2rem, 6vw, 5rem);
+    padding: 2rem;
+    background: linear-gradient(135deg, #e7eeeb 0%, #d5e4de 100%);
+    order: 1;
 }
 
-.chat-preview,
-.metrics-grid {
-    width: min(100%, 560px);
-    border-radius: 1.25rem;
-    border: 1px solid rgba(15, 118, 110, 0.16);
-    background: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.13);
+.phone-mockup {
+    width: 280px;
+    border-radius: 2rem;
+    border: 3px solid #1f2c28;
+    background: #e7eeeb;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.15);
 }
 
-.chat-preview {
-    display: grid;
-    gap: 1rem;
-    padding: 1.25rem;
-}
-
-.preview-header {
+.mockup-header {
     display: flex;
     align-items: center;
-    gap: 0.85rem;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: #1f2c28;
+    color: #fff;
 }
 
-.avatar {
-    width: 3rem;
-    height: 3rem;
-    display: grid;
-    place-items: center;
-    border-radius: 999px;
-    background: #134e4a;
-    color: white;
-    font-weight: 800;
+.mockup-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 700;
+    font-size: 0.85rem;
 }
 
-small {
-    display: block;
-    color: #0f766e;
+.mockup-actions {
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0.7;
+}
+
+.mockup-chat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    min-height: 320px;
+    background: #efeae2;
 }
 
 .bubble {
-    max-width: 75%;
-    padding: 0.85rem 1rem;
-    border-radius: 1rem;
+    max-width: 80%;
+    padding: 0.6rem 0.85rem;
+    border-radius: 0.85rem;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: #111b21;
 }
 
 .incoming {
-    background: #e7f4ef;
+    align-self: flex-start;
+    background: #ffffff;
+    border-top-left-radius: 0.15rem;
 }
 
 .outgoing {
-    justify-self: end;
-    background: #dbeafe;
+    align-self: flex-end;
+    background: #d9fdd3;
+    border-top-right-radius: 0.15rem;
 }
 
-.status-row {
+.mockup-composer {
     display: flex;
+    align-items: center;
     gap: 0.75rem;
-    flex-wrap: wrap;
-    color: #64748b;
-    font-size: 0.85rem;
+    padding: 0.65rem 1rem;
+    background: #f0f4f2;
+    color: #8696a0;
+    font-size: 0.82rem;
+}
+
+.mockup-composer span:first-child,
+.mockup-composer span:last-child {
+    opacity: 0.5;
+}
+
+.mockup-composer span:nth-child(2) {
+    flex: 1;
 }
 
 .metrics-grid {
@@ -176,22 +213,27 @@ small {
     grid-template-columns: repeat(2, 1fr);
     gap: 1px;
     overflow: hidden;
+    border-radius: 1rem;
+    border: 1px solid rgba(15, 118, 110, 0.16);
+    background: rgba(15, 118, 110, 0.08);
+    width: min(100%, 400px);
 }
 
 .metrics-grid article {
     display: grid;
     gap: 0.35rem;
-    padding: 1.5rem;
-    background: rgba(255, 255, 255, 0.72);
+    padding: 1.25rem;
+    background: rgba(255, 255, 255, 0.9);
 }
 
 .metrics-grid strong {
     color: #0f766e;
-    font-size: 1.35rem;
+    font-size: 1.1rem;
 }
 
 .metrics-grid span {
     color: #52635e;
+    font-size: 0.85rem;
 }
 
 @media (max-width: 860px) {
@@ -201,5 +243,9 @@ small {
 
     .auth-visual {
         display: none;
+    }
+
+    .auth-panel {
+        order: 1;
     }
 }

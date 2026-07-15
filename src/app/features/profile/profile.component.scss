@@ -7,7 +7,7 @@
 }
 
 .page-header {
-  padding: 1.05rem 1.5rem 0.75rem;
+  padding: 0.75rem 1.5rem;
   background: #f0f4f2;
   border-bottom: 1px solid #e7eeeb;
 }
@@ -15,7 +15,8 @@
 h1 {
   margin: 0;
   color: #111b21;
-  font-size: 1.55rem;
+  font-size: 1.2rem;
+  font-weight: 700;
 }
 
 .profile-content {
@@ -40,17 +41,19 @@ h1 {
   background: #0f766e;
   color: #fff;
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 h2 {
   margin: 0;
   color: #111b21;
+  font-weight: 600;
 }
 
 .avatar-section p {
   color: #667781;
   margin: 0;
+  font-size: 0.9rem;
 }
 
 .profile-form {
@@ -61,15 +64,15 @@ h2 {
 label {
   display: grid;
   gap: 0.45rem;
-  color: #354641;
-  font-weight: 700;
+  color: #111b21;
+  font-weight: 600;
   font-size: 0.9rem;
 }
 
 input {
-  height: 3rem;
+  height: 2.75rem;
   border: 1px solid #d5e1dd;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   padding: 0 1rem;
   font: inherit;
   background: #fff;
@@ -78,7 +81,7 @@ input {
 
 input:focus {
   border-color: #0f766e;
-  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.14);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
   outline: none;
 }
 
@@ -88,30 +91,51 @@ input:focus {
   cursor: not-allowed;
 }
 
-button {
-  min-height: 2.65rem;
+.primary-action {
+  height: 2.75rem;
   border: 0;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   padding: 0 1rem;
   background: #0f766e;
   color: #fff;
-  font-weight: 800;
+  font-weight: 700;
+  font-size: 0.95rem;
   cursor: pointer;
 }
 
-button:disabled {
+.primary-action:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
+.primary-action:hover {
+  background: #0d9488;
+}
+
 .logout-btn {
   margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  height: 2.75rem;
+  border: 0;
+  border-radius: 0.5rem;
   background: #dc2626;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background: #b91c1c;
 }
 
 .success-banner {
   padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   background: #f0fdf4;
   color: #16a34a;
   font-weight: 600;
@@ -121,7 +145,7 @@ button:disabled {
 
 .error-banner {
   padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   background: #fef2f2;
   color: #dc2626;
   font-weight: 600;

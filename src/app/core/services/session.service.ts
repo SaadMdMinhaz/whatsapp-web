@@ -1,10 +1,11 @@
-﻿import { Injectable, signal } from '@angular/core';
+﻿import { Injectable, Injector, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthUser } from '../models/chat.models';
 import { AuthService, AuthResponse } from './auth.service';
 import { WebSocketService } from './websocket.service';
 import { UserService, UserProfileResponse } from './user.service';
-import { Observable, catchError, map, tap, throwError } from 'rxjs';
+import { ChatFacade } from './chat.facade';
+import { Observable, tap, throwError } from 'rxjs';
 
 const TOKEN_KEY = 'connectly.accessToken';
 const REFRESH_KEY = 'connectly.refreshToken';
@@ -16,6 +17,8 @@ export class SessionService {
   readonly accessToken = signal<string | null>(localStorage.getItem(TOKEN_KEY));
   readonly refreshToken = signal<string | null>(localStorage.getItem(REFRESH_KEY));
   readonly userProfile = signal<UserProfileResponse | null>(null);
+
+  private readonly injector = inject(Injector);
 
   constructor(
     private readonly router: Router,
@@ -49,12 +52,13 @@ export class SessionService {
   }
 
   connectWebSocket(token: string) {
+    const chatFacade = this.injector.get(ChatFacade);
     this.wsService.connect(
       token,
-      () => {},
-      () => {},
-      () => {},
-      () => {},
+      (msg) => chatFacade.handleIncomingMessage(msg),
+      (presence) => chatFacade.handlePresence(presence.userId, presence.online),
+      (typing) => chatFacade.handleTyping(typing.conversationId, typing.userId, typing.isTyping),
+      (read) => chatFacade.handleReadReceipt(read.conversationId, read.userId),
     );
   }
 

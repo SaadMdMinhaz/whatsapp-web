@@ -2,75 +2,249 @@
   <aside class="conversation-pane">
     <header>
       <h1>Chats</h1>
-      <a routerLink="/app/chats">All</a>
+      <a routerLink="/app/chats" title="Back to chats">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <path d="M19 13H5.83l3.58-3.59L8 8l-6 6 6 6 1.41-1.41L5.83 15H19v-2Z"/>
+        </svg>
+      </a>
     </header>
 
     <div class="chat-list">
-      @for (item of threads(); track item.id) {
-        <a class="chat-row" [class.selected]="item.id === threadId()" [routerLink]="['/app/chats', item.id]">
-          <span class="avatar">{{ item.avatar }}</span>
-          <div>
-            <strong>{{ item.title }}</strong>
-            <p>{{ item.lastMessage }}</p>
-          </div>
-          <time>{{ item.lastMessageAt }}</time>
-        </a>
+      @if (chat.loading()) {
+        <div class="empty-state">Loading conversations...</div>
+      } @else if (threads().length === 0) {
+        <div class="empty-state">No conversations yet</div>
+      } @else {
+        @for (item of threads(); track item.id) {
+          <a class="chat-row" [class.selected]="item.id === threadId()" [routerLink]="['/app/chats', item.id]">
+            <span class="avatar">{{ item.avatar }}</span>
+            <div class="chat-summary">
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.lastMessage }}</p>
+            </div>
+            <time>{{ item.lastMessageAt }}</time>
+          </a>
+        }
       }
     </div>
   </aside>
 
   <section class="room">
     <header class="room-header">
+      <button class="back-btn" routerLink="/app/chats" title="Back">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2Z"/>
+        </svg>
+      </button>
       <span class="avatar">{{ thread()?.avatar }}</span>
-      <div>
-        <h2>{{ thread()?.title }}</h2>
-        <p>{{ thread()?.participants?.length }} members</p>
+      <div class="room-info">
+        <h2>{{ thread()?.title || 'Chat' }}</h2>
+        <p>{{ thread()?.type === 'GROUP' ? (memberProfiles().length || '0') + ' members' : (chat.onlineUserIds().has(thread()?.otherUser?.userId || '') ? 'online' : '') }}</p>
+      </div>
+      <div class="call-actions">
+        @if (callService.state().status === 'idle') {
+          <button type="button" title="Audio call" (click)="startAudioCall()">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+            </svg>
+          </button>
+          <button type="button" title="Video call" (click)="startVideoCall()">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+            </svg>
+          </button>
+        } @else if (callService.state().status === 'calling' || callService.state().status === 'connected') {
+          <button type="button" class="call-end-btn" title="End call" (click)="endCall()">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/>
+            </svg>
+          </button>
+        }
       </div>
       <div class="header-actions">
-        <button type="button" (click)="chat.toggleArchive(threadId())">Archive</button>
+        <button type="button" title="Search">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5Zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14Z"/>
+          </svg>
+        </button>
+        <div class="menu-wrapper">
+          <button type="button" title="Menu" (click)="toggleMenu()">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2m0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2Z"/>
+            </svg>
+          </button>
+          @if (showMenu()) {
+            <div class="menu-dropdown" (click)="closeMenu()">
+              <div class="menu-items" (click)="$event.stopPropagation()">
+                @if (thread()?.type === 'GROUP') {
+                  <button (click)="viewContact()">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    Group info
+                  </button>
+                } @else {
+                  <button (click)="viewContact()">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    View contact
+                  </button>
+                }
+                <button (click)="archiveChat()">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-3h4v3h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"/></svg>
+                  Archive
+                </button>
+                <button (click)="clearMessages()">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5l-1-1h-5l-1 1H5v2h14V4h-3.5z"/></svg>
+                  Clear messages
+                </button>
+                @if (thread()?.type !== 'GROUP') {
+                  <button (click)="blockUser()">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9C4.63 15.55 4 13.85 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1C19.37 8.45 20 10.15 20 12c0 4.42-3.58 8-8 8z"/></svg>
+                    Block
+                  </button>
+                }
+                <button (click)="deleteChat()" class="danger">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                  Delete chat
+                </button>
+              </div>
+            </div>
+          }
+        </div>
       </div>
     </header>
 
-    <div class="message-list">
-      @for (message of chat.messages(); track message.id) {
-        <article class="message" [class.mine]="isOwnMessage(message.senderId)">
-          @if (!isOwnMessage(message.senderId) && thread()?.type === 'GROUP') {
-            <strong class="sender-name">{{ getSenderName(message.senderId) }}</strong>
-          }
-          @if (message.isDeleted) {
-            <p class="deleted">This message was deleted</p>
-          } @else {
-            @if (message.content) {
-              <p>{{ message.content }}</p>
-            }
-            @if (message.mediaUrl) {
-              <div class="attachment">
-                <span>{{ message.messageType | lowercase }}</span>
-                <div>
-                  <strong>{{ message.mediaFileName || message.messageType }}</strong>
-                  <small>{{ message.mediaFileSize | number }} bytes</small>
-                </div>
-              </div>
-            }
-          }
-          <footer>
-            <span>{{ formatTime(message.createdAt) }}</span>
-            @if (isOwnMessage(message.senderId)) {
-              <span>{{ formatStatus(message.status) }}</span>
-            }
-          </footer>
-        </article>
-      }
-    </div>
+    @if (callService.state().status !== 'idle') {
+      <div class="call-banner">
+        <span>
+          @if (callService.state().status === 'calling') { Calling... }
+          @else if (callService.state().status === 'connected') { Call in progress }
+          @else if (callService.state().status === 'ended') { Call ended }
+          @else { Incoming call... }
+        </span>
+      </div>
+    }
 
-    <form class="composer" (ngSubmit)="send()">
-      <textarea
-        [value]="draft()"
-        (input)="updateDraft($event)"
-        (keydown)="onKeydown($event)"
-        placeholder="Type a message"
-      ></textarea>
-      <button class="send" type="submit">Send</button>
-    </form>
+    @if (detail()) {
+      <div class="detail-panel">
+        <header class="detail-header">
+          <button type="button" (click)="closeDetail()">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2Z"/>
+            </svg>
+          </button>
+          <h2>{{ thread()?.type === 'GROUP' ? 'Group info' : 'Contact info' }}</h2>
+        </header>
+        <div class="detail-body">
+          <div class="detail-avatar">{{ thread()?.avatar }}</div>
+          <h3>{{ thread()?.title }}</h3>
+          @if (thread()?.type === 'GROUP') {
+            <p class="member-count">{{ memberProfiles().length }} members</p>
+            <div class="member-list">
+              @for (member of memberProfiles(); track member.id) {
+                <div class="member-row">
+                  <span class="member-avatar">{{ (member.displayName || member.username || '?')[0] | uppercase }}</span>
+                  <div>
+                    <strong>{{ member.displayName || member.username || member.id }}</strong>
+                    <p>{{ member.about || (chat.onlineUserIds().has(member.id) ? 'online' : 'offline') }}</p>
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="detail-info">
+              <div class="detail-row">
+                <label>Username</label>
+                <span>{{ detail()?.participants?.[0]?.username || '-' }}</span>
+              </div>
+              <div class="detail-row">
+                <label>About</label>
+                <span>{{ memberProfiles()[0]?.about || '-' }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    } @else {
+      <div class="message-list" #messageList>
+        @for (message of chat.sortedMessages(); track message.id) {
+          <article class="message" [class.mine]="isOwnMessage(message.senderId)">
+            @if (!isOwnMessage(message.senderId)) {
+              <strong class="sender-name">{{ getSenderName(message.senderId) }}</strong>
+            }
+            @if (message.isDeleted) {
+              <p class="deleted">This message was deleted</p>
+            } @else {
+              @if (message.content) {
+                <p>{{ message.content }}</p>
+              }
+              @if (message.mediaUrl) {
+                <div class="attachment">
+                  <span>{{ message.messageType | lowercase }}</span>
+                  <div>
+                    <strong>{{ message.mediaFileName || message.messageType }}</strong>
+                    <small>{{ message.mediaFileSize | number }} bytes</small>
+                  </div>
+                </div>
+              }
+            }
+            <footer>
+              <span>{{ formatTime(message.createdAt) }}</span>
+              @if (isOwnMessage(message.senderId)) {
+                <span class="msg-status">
+                  @if (message.status === 'READ') {
+                    <svg viewBox="0 0 16 11" width="14" height="10" fill="#53bdeb">
+                      <path d="M11.07.2L9.65 1.6l3.2 3.2 1.42-1.4L11.07.2zM7.15 4.2L5.73 5.6l3.2 3.2 1.42-1.4L7.15 4.2zM.2 5.73l1.42-1.4L4.8 7.93 6.93 5.8l1.42 1.4-3.55 3.6L.2 5.73z"/>
+                    </svg>
+                  } @else if (message.status === 'DELIVERED') {
+                    <svg viewBox="0 0 16 11" width="14" height="10" fill="#8696a0">
+                      <path d="M11.07.2L9.65 1.6l3.2 3.2 1.42-1.4L11.07.2zM7.15 4.2L5.73 5.6l3.2 3.2 1.42-1.4L7.15 4.2zM.2 5.73l1.42-1.4L4.8 7.93 6.93 5.8l1.42 1.4-3.55 3.6L.2 5.73z"/>
+                    </svg>
+                  } @else {
+                    <svg viewBox="0 0 12 11" width="12" height="10" fill="#8696a0">
+                      <path d="M9.1 2.2L4.7 6.6 2.9 4.8 1.5 6.2 4.7 9.4 10.5 3.6 9.1 2.2z"/>
+                    </svg>
+                  }
+                </span>
+              }
+            </footer>
+          </article>
+        }
+      </div>
+
+      @if (showEmoji()) {
+        <div class="emoji-picker" (click)="showEmoji.set(false)">
+          <div class="emoji-grid" (click)="$event.stopPropagation()">
+            @for (emoji of emojiList; track emoji) {
+              <button class="emoji-btn" type="button" (click)="insertEmoji(emoji)">{{ emoji }}</button>
+            }
+          </div>
+        </div>
+      }
+
+      <form class="composer" (ngSubmit)="send()">
+        <button type="button" class="composer-btn" title="Emoji" (click)="toggleEmoji()">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3-9.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm6 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM12 17c-2.76 0-5-2.24-5-5h10c0 2.76-2.24 5-5 5z"/>
+          </svg>
+        </button>
+        <button type="button" class="composer-btn" title="Attach" (click)="triggerFileInput()">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+            <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5Z"/>
+          </svg>
+        </button>
+        <input #fileInput type="file" hidden (change)="onFileSelected($event)" />
+        <textarea
+          [value]="draft()"
+          (input)="updateDraft($event)"
+          (keydown)="onKeydown($event)"
+          placeholder="Type a message"
+          rows="1"
+        ></textarea>
+        <button class="send" type="submit" [disabled]="!draft().trim()" title="Send">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2 .01 7z"/>
+          </svg>
+        </button>
+      </form>
+    }
   </section>
 </section>

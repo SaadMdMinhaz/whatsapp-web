@@ -12,7 +12,8 @@ export interface UserProfileResponse {
   profilePictureUrl: string;
   createdAt: string;
   updatedAt: string;
-  active: boolean;
+  isActive?: boolean;
+  active?: boolean;
 }
 
 export interface ContactResponse {
