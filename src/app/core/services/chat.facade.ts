@@ -1,4 +1,4 @@
-﻿import { Injectable, inject, signal, computed } from '@angular/core';
+﻿import { Injectable, Injector, inject, signal, computed } from '@angular/core';
 import { ChatService, ConversationResponse, MessageResponse, SendMessageRequest, ParticipantResponse } from './chat.service';
 import { MediaService } from './media.service';
 import { UserService, UserProfileResponse } from './user.service';
@@ -11,6 +11,7 @@ export class ChatFacade {
   private readonly mediaService = inject(MediaService);
   private readonly userService = inject(UserService);
   private readonly session = inject(SessionService);
+  private readonly injector = inject(Injector);
 
   readonly threads = signal<ChatThread[]>([]);
   readonly messages = signal<ChatMessage[]>([]);
@@ -35,6 +36,7 @@ export class ChatFacade {
       next: (convos) => {
         const mapped = convos.map((c) => this.mapConversation(c));
         this.threads.set(mapped);
+        this.subscribeAllCallTopics(mapped.map((t) => t.id));
 
         for (const thread of mapped) {
           if (thread.type === 'GROUP') {
@@ -64,7 +66,7 @@ export class ChatFacade {
                 );
               },
               error: () => {
-                const fallback = 'User ' + thread.otherUser.userId.slice(0, 4);
+                const fallback = thread.otherUser.userId.slice(0, 8);
                 this.userDisplayNameCache.set(thread.otherUser.userId, fallback);
                 this.threads.update((ts) =>
                   ts.map((t) =>
@@ -253,13 +255,22 @@ export class ChatFacade {
     return this.threads().find((t) => t.id === threadId);
   }
 
+  private subscribeAllCallTopics(conversationIds: string[]) {
+    import('./call.service').then(({ CallService }) => {
+      const callService = this.injector.get(CallService);
+      for (const id of conversationIds) {
+        callService.subscribeCallTopics(id);
+      }
+    });
+  }
+
   getUserDisplayName(userId: string): string {
     for (const t of this.threads()) {
       if (t.otherUser.userId === userId) {
-        return t.otherUser.displayName || t.otherUser.username || userId;
+        return t.otherUser.displayName || t.otherUser.username || userId.slice(0, 8);
       }
     }
-    return 'Unknown';
+    return userId.slice(0, 8);
   }
 
   toggleArchive(threadId: string) {
@@ -292,11 +303,12 @@ export class ChatFacade {
 
   private mapConversation(c: ConversationResponse): ChatThread {
     const isGroup = c.type === 'GROUP';
+    const hasBackendName = !!(c.otherUser.displayName || c.otherUser.username);
     let displayName: string;
     if (isGroup) {
       displayName = c.otherUser.displayName || 'Group';
     } else {
-      displayName = c.otherUser.displayName || c.otherUser.username || 'User';
+      displayName = hasBackendName ? (c.otherUser.displayName || c.otherUser.username!) : '';
     }
 
     const otherUser: Participant = {
@@ -305,7 +317,7 @@ export class ChatFacade {
       username: c.otherUser.username || '',
       profilePictureUrl: c.otherUser.profilePictureUrl || '',
     };
-    const title = displayName;
+    const title = displayName || 'Loading...';
     const avatar = title
       .split(' ')
       .map((w) => w[0])

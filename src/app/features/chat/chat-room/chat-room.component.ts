@@ -45,7 +45,6 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
   @ViewChild('messageList') messageList!: ElementRef<HTMLElement>;
 
   ngOnInit() {
-    this.callService.resetState();
     this.chat.loadConversations();
 
     this.route.paramMap.subscribe((params) => {
@@ -56,7 +55,6 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
 
       if (prevId) {
         this.wsService.unsubscribeFromConversation(prevId);
-        this.callService.unsubscribeCallTopics(prevId);
       }
 
       this.chat.messages.set([]);
@@ -65,7 +63,6 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
       this.showMenu.set(false);
       this.detail.set(null);
       this.memberProfiles.set([]);
-      this.callService.resetState();
       this.threadId.set(newId);
 
       if (newId) {
@@ -90,7 +87,6 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     const id = this.threadId();
     if (id) {
       this.wsService.unsubscribeFromConversation(id);
-      this.callService.unsubscribeCallTopics(id);
     }
     if (this.typingTimeout) {
       clearTimeout(this.typingTimeout);
@@ -160,12 +156,18 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
     const convId = this.threadId();
     const otherUser = this.thread()?.otherUser;
     if (convId && otherUser) {
-      this.callService.startCall(convId, otherUser.userId);
+      const name = otherUser.displayName || otherUser.username || 'User';
+      this.callService.startCall(convId, otherUser.userId, name, 'audio');
     }
   }
 
   startVideoCall() {
-    this.startAudioCall();
+    const convId = this.threadId();
+    const otherUser = this.thread()?.otherUser;
+    if (convId && otherUser) {
+      const name = otherUser.displayName || otherUser.username || 'User';
+      this.callService.startCall(convId, otherUser.userId, name, 'video');
+    }
   }
 
   endCall() {

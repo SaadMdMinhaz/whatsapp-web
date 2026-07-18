@@ -84,6 +84,10 @@ export class SessionService {
     );
   }
 
+  isWebSocketConnected(): boolean {
+    return this.wsService.connected;
+  }
+
   logout() {
     this.wsService.disconnect();
     localStorage.removeItem(TOKEN_KEY);
