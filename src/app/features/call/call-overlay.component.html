@@ -17,24 +17,66 @@
     } @else {
       <div class="call-panel active">
         <div class="video-stage">
-          @if (call.remoteStream() && call.state().kind === 'video') {
-            <video class="remote-video" [srcObject]="call.remoteStream()" autoplay playsinline></video>
-          } @else {
-            <div class="audio-face">
-              <div class="caller-avatar big">{{ call.state().remoteName.charAt(0).toUpperCase() }}</div>
-              <h2 class="caller-name">{{ call.state().remoteName }}</h2>
+          @if (call.state().isGroup) {
+            <div class="group-grid" [class]="'grid-' + gridClass()">
+              @for (p of call.state().participants; track p.userId) {
+                <div class="participant-cell">
+                  @if (p.stream && call.state().kind === 'video') {
+                    <video class="participant-video" [srcObject]="p.stream" autoplay playsinline></video>
+                  } @else {
+                    <div class="participant-avatar">{{ p.name.charAt(0).toUpperCase() }}</div>
+                  }
+                  @if (p.stream) {
+                    <audio [srcObject]="p.stream" autoplay></audio>
+                  }
+                  <span class="participant-name">{{ p.name }}</span>
+                </div>
+              }
+              <div class="participant-cell local-cell">
+                @if (call.localStream() && call.state().kind === 'video') {
+                  <video class="participant-video" [srcObject]="call.localStream()" autoplay playsinline muted></video>
+                } @else {
+                  <div class="participant-avatar local-avatar">You</div>
+                }
+                <span class="participant-name">You</span>
+              </div>
             </div>
-          }
+          } @else {
+            @if (call.remoteStream() && call.state().kind === 'video') {
+              <video class="remote-video" [srcObject]="call.remoteStream()" autoplay playsinline></video>
+            } @else {
+              <div class="audio-face">
+                <div class="caller-avatar big">{{ call.state().remoteName.charAt(0).toUpperCase() }}</div>
+                <h2 class="caller-name">{{ call.state().remoteName }}</h2>
+              </div>
+            }
 
-          @if (call.localStream() && call.state().kind === 'video') {
-            <video class="local-video" [srcObject]="call.localStream()" autoplay playsinline muted></video>
+            @if (call.remoteStream()) {
+              <audio [srcObject]="call.remoteStream()" autoplay></audio>
+            }
+
+            @if (call.localStream() && call.state().kind === 'video') {
+              <video class="local-video" [srcObject]="call.localStream()" autoplay playsinline muted></video>
+            }
           }
 
           <div class="call-status-pill">
             @switch (call.state().status) {
-              @case ('outgoing') { Calling {{ call.state().remoteName }}… }
+              @case ('outgoing') {
+                @if (call.state().isGroup) {
+                  Calling group…
+                } @else {
+                  Calling {{ call.state().remoteName }}…
+                }
+              }
               @case ('connecting') { Connecting… }
-              @case ('connected') { {{ call.state().remoteName }} }
+              @case ('connected') {
+                @if (call.state().isGroup) {
+                  {{ call.state().participants.length + 1 }} participants
+                } @else {
+                  {{ call.state().remoteName }}
+                }
+              }
               @case ('ended') { {{ call.state().endedReason }} }
             }
           </div>

@@ -7,6 +7,14 @@ export type CallDirection = 'outgoing' | 'incoming';
 export type CallStatus = 'idle' | 'outgoing' | 'incoming' | 'connecting' | 'connected' | 'ended';
 export type CallKind = 'audio' | 'video';
 
+export interface ParticipantInfo {
+  userId: string;
+  name: string;
+  stream: MediaStream | null;
+  audioEnabled: boolean;
+  videoEnabled: boolean;
+}
+
 export interface CallState {
   status: CallStatus;
   direction: CallDirection | null;
@@ -15,6 +23,8 @@ export interface CallState {
   remoteUserId: string | null;
   remoteName: string;
   endedReason: string;
+  isGroup: boolean;
+  participants: ParticipantInfo[];
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -30,6 +40,8 @@ const IDLE_STATE: CallState = {
   remoteUserId: null,
   remoteName: '',
   endedReason: '',
+  isGroup: false,
+  participants: [],
 };
 
 @Injectable({ providedIn: 'root' })
@@ -45,11 +57,16 @@ export class CallService {
   readonly cameraEnabled = signal(true);
 
   private pc: RTCPeerConnection | null = null;
-  private pendingCandidates: RTCIceCandidateInit[] = [];
+  private peerConnections = new Map<string, RTCPeerConnection>();
+  private remoteStreamsByPeer = new Map<string, MediaStream>();
+  private pendingCandidates = new Map<string, RTCIceCandidateInit[]>();
   private pendingOffer: any = null;
+  private pendingOfferFrom: string | null = null;
+  private pendingGroupOffers = new Map<string, any>();
   private endedTimeout: ReturnType<typeof setTimeout> | null = null;
   private ringTimeout: ReturnType<typeof setTimeout> | null = null;
-  private readonly subscribedConversations = new Set<string>();
+  private connectionWatchdog: ReturnType<typeof setInterval> | null = null;
+  private groupMemberIds: string[] = [];
 
   private get myId(): string {
     return this.session.currentUser()?.id ?? '';
@@ -64,28 +81,39 @@ export class CallService {
     }
   }
 
-  subscribeCallTopics(conversationId: string) {
-    if (this.subscribedConversations.has(conversationId)) return;
-    this.subscribedConversations.add(conversationId);
-    this.ws.subscribeToCallOffer(conversationId, (msg) => this.handleOffer(conversationId, msg));
-    this.ws.subscribeToCallAnswer(conversationId, (msg) => this.handleAnswer(msg));
-    this.ws.subscribeToIceCandidate(conversationId, (msg) => this.handleIceCandidate(msg));
-    this.ws.subscribeToCallEnd(conversationId, (msg) => this.handleRemoteEnd(msg));
-  }
-
-  unsubscribeCallTopics(conversationId: string) {
-    if (this.state().conversationId === conversationId) return;
-    this.subscribedConversations.delete(conversationId);
-    this.ws.unsubscribeCallTopic(conversationId);
+  init() {
+    this.ws.subscribeIncomingCalls((msg) => {
+      switch (msg.kind) {
+        case 'offer':
+          this.handleOffer(msg.payload);
+          break;
+        case 'answer':
+          this.handleAnswer(msg.payload);
+          break;
+        case 'iceCandidate':
+          this.handleIceCandidate(msg.payload);
+          break;
+        case 'end':
+          this.handleRemoteEnd(msg.payload);
+          break;
+        case 'group.join':
+          this.handleGroupJoin(msg.payload);
+          break;
+      }
+    });
   }
 
   async startCall(conversationId: string, remoteUserId: string, remoteName: string, kind: CallKind) {
-    if (this.state().status !== 'idle') return;
-    this.subscribeCallTopics(conversationId);
+    const status = this.state().status;
+    if (status !== 'idle' && status !== 'ended') return;
+
+    this.clearAllTimeouts();
+    this.cleanup();
+
     try {
       const stream = await this.getMedia(kind);
       this.localStream.set(stream);
-      this.createPeer(conversationId, stream);
+      this.createPeer(conversationId, stream, remoteUserId);
 
       this.state.set({
         status: 'outgoing',
@@ -95,11 +123,13 @@ export class CallService {
         remoteUserId,
         remoteName,
         endedReason: '',
+        isGroup: false,
+        participants: [],
       });
 
       const offer = await this.pc!.createOffer();
       await this.pc!.setLocalDescription(offer);
-      this.ws.sendCallOffer(conversationId, JSON.stringify({ sdp: offer, kind }), this.myId);
+      this.ws.sendCallOffer(conversationId, JSON.stringify({ sdp: offer, kind }), this.myId, remoteUserId);
 
       this.ringTimeout = setTimeout(() => {
         if (this.state().status === 'outgoing') {
@@ -112,13 +142,109 @@ export class CallService {
     }
   }
 
-  private async handleOffer(conversationId: string, msg: any) {
+  async startGroupCall(conversationId: string, memberIds: string[], kind: CallKind) {
+    const status = this.state().status;
+    if (status !== 'idle' && status !== 'ended') return;
+
+    this.clearAllTimeouts();
+    this.cleanup();
+    this.groupMemberIds = memberIds.filter((id) => id !== this.myId);
+
+    try {
+      const stream = await this.getMedia(kind);
+      this.localStream.set(stream);
+
+      this.state.set({
+        status: 'outgoing',
+        direction: 'outgoing',
+        kind,
+        conversationId,
+        remoteUserId: null,
+        remoteName: '',
+        endedReason: '',
+        isGroup: true,
+        participants: [],
+      });
+
+      for (const memberId of this.groupMemberIds) {
+        if (this.shouldCreateOfferer(memberId)) {
+          await this.createGroupPeer(conversationId, stream, memberId);
+          const pc = this.peerConnections.get(memberId);
+          if (pc) {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            this.ws.sendCallOffer(conversationId, JSON.stringify({ sdp: offer, kind, isGroup: true }), this.myId, memberId);
+          }
+        }
+        // If we should NOT create offerer (our ID > memberId),
+        // the other side will send us an offer when they get group.join
+      }
+
+      this.ringTimeout = setTimeout(() => {
+        const s = this.state();
+        if (s.status === 'outgoing' && s.participants.length === 0) {
+          this.endCall('No answer');
+        }
+      }, 45000);
+    } catch (e) {
+      console.error('Group call start error:', e);
+      this.finishCall('Camera/microphone unavailable');
+    }
+  }
+
+  private async handleOffer(msg: any) {
     const callerId: string = msg.callerId || '';
     if (callerId && callerId === this.myId) return;
 
-    if (this.state().status !== 'idle') {
-      this.ws.sendCallEnd(conversationId, this.myId);
+    const conversationId = this.extractConversationId(msg);
+    if (!conversationId) return;
+
+    const status = this.state().status;
+
+    if (status === 'connected' || status === 'connecting' || status === 'outgoing') {
+      if (this.state().isGroup && this.state().conversationId === conversationId) {
+        let parsedOffer: any;
+        try {
+          parsedOffer = typeof msg.sdp === 'string' ? JSON.parse(msg.sdp) : msg.sdp;
+        } catch { return; }
+        if (this.localStream()) {
+          // Close existing offerer peer if present (role conflict fix)
+          const existingPc = this.peerConnections.get(callerId);
+          if (existingPc) {
+            try { existingPc.close(); } catch (_) {}
+            this.peerConnections.delete(callerId);
+          }
+          await this.createGroupPeer(conversationId, this.localStream()!, callerId);
+          const pc = this.peerConnections.get(callerId);
+          if (pc) {
+            await pc.setRemoteDescription(new RTCSessionDescription(parsedOffer?.sdp ?? parsedOffer));
+            await this.drainCandidates(pc);
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            this.ws.sendCallAnswer(conversationId, JSON.stringify(answer), this.myId, callerId);
+          }
+        }
+        return;
+      }
+      // Non-group: reject if already in a call
+      if (status !== 'outgoing') {
+        this.ws.sendCallEnd(conversationId, this.myId, callerId);
+      }
       return;
+    }
+
+    if (status === 'ended' || status === 'incoming') {
+      let earlyParsed: any;
+      try {
+        earlyParsed = typeof msg.sdp === 'string' ? JSON.parse(msg.sdp) : msg.sdp;
+      } catch { return; }
+      const earlyIsGroup = earlyParsed?.isGroup === true;
+      if (status === 'incoming' && earlyIsGroup && this.state().conversationId === conversationId) {
+        this.pendingGroupOffers.set(callerId, earlyParsed?.sdp ?? earlyParsed);
+        return;
+      }
+      this.clearAllTimeouts();
+      this.cleanup();
     }
 
     let parsed: any;
@@ -128,7 +254,9 @@ export class CallService {
       return;
     }
     const kind: CallKind = parsed?.kind === 'audio' ? 'audio' : 'video';
+    const isGroup = parsed?.isGroup === true;
     this.pendingOffer = parsed?.sdp ?? parsed;
+    this.pendingOfferFrom = callerId;
 
     this.state.set({
       status: 'incoming',
@@ -138,6 +266,8 @@ export class CallService {
       remoteUserId: callerId,
       remoteName: this.resolveName(callerId),
       endedReason: '',
+      isGroup,
+      participants: [],
     });
 
     this.ringTimeout = setTimeout(() => {
@@ -151,20 +281,38 @@ export class CallService {
     const s = this.state();
     if (s.status !== 'incoming' || !s.conversationId || !this.pendingOffer) return;
     this.clearRingTimeout();
+
     try {
       const stream = await this.getMedia(s.kind);
       this.localStream.set(stream);
-      this.createPeer(s.conversationId, stream);
+      this.createPeer(s.conversationId, stream, s.remoteUserId!);
 
       await this.pc!.setRemoteDescription(new RTCSessionDescription(this.pendingOffer));
-      await this.drainCandidates();
+      await this.drainCandidates(this.pc!);
 
       const answer = await this.pc!.createAnswer();
       await this.pc!.setLocalDescription(answer);
-      this.ws.sendCallAnswer(s.conversationId, JSON.stringify(answer), this.myId);
+      this.ws.sendCallAnswer(s.conversationId, JSON.stringify(answer), this.myId, s.remoteUserId ?? '');
 
       this.pendingOffer = null;
+      this.pendingOfferFrom = null;
       this.state.update((st) => ({ ...st, status: 'connecting' }));
+
+      // Process any queued group offers
+      if (s.isGroup && this.pendingGroupOffers.size > 0) {
+        for (const [callerId, offer] of this.pendingGroupOffers) {
+          await this.createGroupPeer(s.conversationId, stream, callerId);
+          const pc = this.peerConnections.get(callerId);
+          if (pc) {
+            await pc.setRemoteDescription(new RTCSessionDescription(offer));
+            await this.drainCandidates(pc);
+            const ans = await pc.createAnswer();
+            await pc.setLocalDescription(ans);
+            this.ws.sendCallAnswer(s.conversationId, JSON.stringify(ans), this.myId, callerId);
+          }
+        }
+        this.pendingGroupOffers.clear();
+      }
     } catch (e) {
       console.error('Accept call error:', e);
       this.endCall('Failed to connect');
@@ -176,13 +324,29 @@ export class CallService {
   }
 
   private async handleAnswer(msg: any) {
-    if (!this.pc || this.state().status !== 'outgoing') return;
+    const senderId = msg.calleeId || msg.senderId || '';
+    const s = this.state();
+
+    if (s.isGroup) {
+      const pc = this.peerConnections.get(senderId);
+      if (!pc) return;
+      try {
+        const sdp = typeof msg.sdp === 'string' ? JSON.parse(msg.sdp) : msg.sdp;
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+        await this.drainCandidates(pc);
+      } catch (e) {
+        console.error('Group answer handling error:', e);
+      }
+      return;
+    }
+
+    if (!this.pc || s.status !== 'outgoing') return;
     this.clearRingTimeout();
     try {
       const sdp = typeof msg.sdp === 'string' ? JSON.parse(msg.sdp) : msg.sdp;
       await this.pc.setRemoteDescription(new RTCSessionDescription(sdp));
-      await this.drainCandidates();
-      this.state.update((s) => ({ ...s, status: 'connecting' }));
+      await this.drainCandidates(this.pc);
+      this.state.update((st) => ({ ...st, status: 'connecting' }));
     } catch (e) {
       console.error('Call answer handling error:', e);
     }
@@ -190,13 +354,33 @@ export class CallService {
 
   private async handleIceCandidate(msg: any) {
     if (msg.senderId && msg.senderId === this.myId) return;
+    const senderId = msg.senderId || '';
+
     const candidate: RTCIceCandidateInit = {
       candidate: msg.candidate,
       sdpMid: msg.sdpMid,
       sdpMLineIndex: msg.sdpMLineIndex,
     };
+
+    if (this.state().isGroup) {
+      const pc = this.peerConnections.get(senderId);
+      if (!pc || !pc.remoteDescription) {
+        if (!this.pendingCandidates.has(senderId)) {
+          this.pendingCandidates.set(senderId, []);
+        }
+        this.pendingCandidates.get(senderId)!.push(candidate);
+        return;
+      }
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (e) {
+        console.warn('Group ICE candidate error:', e);
+      }
+      return;
+    }
+
     if (!this.pc || !this.pc.remoteDescription) {
-      this.pendingCandidates.push(candidate);
+      this.pendingCandidates.get('_default')?.push(candidate) ?? this.pendingCandidates.set('_default', [candidate]);
       return;
     }
     try {
@@ -206,16 +390,68 @@ export class CallService {
     }
   }
 
-  private handleRemoteEnd(msg: any) {
+  private async handleGroupJoin(msg: any) {
+    const s = this.state();
+    if (!s.isGroup || s.status === 'idle' || s.status === 'ended') return;
+    if (msg.userId === this.myId) return;
+
+    const newParticipantId = msg.userId;
+    if (this.peerConnections.has(newParticipantId)) return;
+
+    const stream = this.localStream();
+    if (!stream || !s.conversationId) return;
+
+    // Ownership model: smaller ID is the offerer
+    if (this.shouldCreateOfferer(newParticipantId)) {
+      await this.createGroupPeer(s.conversationId, stream, newParticipantId);
+      const pc = this.peerConnections.get(newParticipantId);
+      if (pc) {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        this.ws.sendCallOffer(s.conversationId, JSON.stringify({ sdp: offer, kind: s.kind, isGroup: true }), this.myId, newParticipantId);
+      }
+    }
+    // If we are NOT the offerer, we do nothing here.
+    // The new participant will send us an offer (via handleOffer),
+    // which will create the answerer peer for us.
+  }
+
+  private async handleRemoteEnd(msg: any) {
     if (msg?.userId && msg.userId === this.myId) return;
-    const wasRinging = this.state().status === 'incoming' || this.state().status === 'outgoing';
-    this.finishCall(wasRinging ? 'Call ended' : 'Call ended');
+
+    const s = this.state();
+    if (s.status === 'idle' || s.status === 'ended') return;
+
+    if (s.status === 'incoming') {
+      this.finishCall('Call cancelled');
+      return;
+    }
+
+    if (s.isGroup && msg?.userId) {
+      this.removePeer(msg.userId);
+      const updated = this.state();
+      if (updated.participants.length === 0) {
+        this.finishCall('Call ended');
+      }
+      return;
+    }
+
+    this.finishCall('Call ended');
   }
 
   endCall(reason = 'Call ended') {
-    const convId = this.state().conversationId;
-    if (convId) {
-      this.ws.sendCallEnd(convId, this.myId);
+    const s = this.state();
+    if (s.isGroup && s.conversationId) {
+      for (const p of s.participants) {
+        this.ws.sendCallEnd(s.conversationId, this.myId, p.userId);
+      }
+      for (const memberId of this.groupMemberIds) {
+        if (!s.participants.find((p) => p.userId === memberId)) {
+          this.ws.sendCallEnd(s.conversationId, this.myId, memberId);
+        }
+      }
+    } else if (s.conversationId) {
+      this.ws.sendCallEnd(s.conversationId, this.myId, s.remoteUserId ?? '');
     }
     this.finishCall(reason);
   }
@@ -237,27 +473,34 @@ export class CallService {
   }
 
   resetState() {
-    this.clearTimeouts();
+    this.clearAllTimeouts();
+    this.stopConnectionWatchdog();
     this.cleanup();
     this.pendingOffer = null;
-    this.pendingCandidates = [];
+    this.pendingOfferFrom = null;
+    this.pendingGroupOffers.clear();
+    this.groupMemberIds = [];
     this.state.set({ ...IDLE_STATE });
   }
 
   private finishCall(reason: string) {
-    this.clearTimeouts();
+    this.clearAllTimeouts();
+    this.stopConnectionWatchdog();
     this.cleanup();
     this.pendingOffer = null;
-    this.pendingCandidates = [];
-    this.state.update((s) => ({ ...IDLE_STATE, status: 'ended', endedReason: reason }));
+    this.pendingOfferFrom = null;
+    this.pendingGroupOffers.clear();
+    this.groupMemberIds = [];
+    this.state.set({ ...IDLE_STATE, status: 'ended', endedReason: reason });
     this.endedTimeout = setTimeout(() => {
-      if (this.state().status === 'ended') {
-        this.state.set({ ...IDLE_STATE });
-      }
+      this.state.set({ ...IDLE_STATE });
     }, 2500);
   }
 
-  private createPeer(conversationId: string, stream: MediaStream) {
+  private createPeer(conversationId: string, stream: MediaStream, remoteUserId: string) {
+    if (this.pc) {
+      try { this.pc.close(); } catch (_) {}
+    }
     this.pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     stream.getTracks().forEach((track) => this.pc!.addTrack(track, stream));
 
@@ -272,34 +515,164 @@ export class CallService {
           event.candidate.candidate,
           event.candidate.sdpMid ?? '',
           event.candidate.sdpMLineIndex ?? 0,
-          this.myId
+          this.myId,
+          remoteUserId
         );
       }
     };
 
-    this.pc.onconnectionstatechange = () => {
-      const st = this.pc?.connectionState;
-      if (st === 'connected') {
-        this.state.update((s) => (s.status === 'connecting' || s.status === 'outgoing' ? { ...s, status: 'connected' } : s));
-      } else if (st === 'failed' || st === 'disconnected' || st === 'closed') {
-        if (this.state().status === 'connected' || this.state().status === 'connecting') {
-          this.finishCall('Call ended');
-        }
-      }
-    };
+    this.setupConnectionWatchers(this.pc, remoteUserId);
+    this.startConnectionWatchdog();
   }
 
-  private async drainCandidates() {
-    if (!this.pc) return;
-    const candidates = this.pendingCandidates;
-    this.pendingCandidates = [];
+  private async createGroupPeer(conversationId: string, stream: MediaStream, remoteUserId: string) {
+    const existing = this.peerConnections.get(remoteUserId);
+    if (existing) {
+      try { existing.close(); } catch (_) {}
+    }
+
+    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+    this.peerConnections.set(remoteUserId, pc);
+    this.pendingCandidates.set(remoteUserId, []);
+
+    pc.ontrack = (event) => {
+      const remoteStream = event.streams[0];
+      if (remoteStream) {
+        this.remoteStreamsByPeer.set(remoteUserId, remoteStream);
+        this.updateParticipantStream(remoteUserId, remoteStream);
+      }
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        this.ws.sendIceCandidate(
+          conversationId,
+          event.candidate.candidate,
+          event.candidate.sdpMid ?? '',
+          event.candidate.sdpMLineIndex ?? 0,
+          this.myId,
+          remoteUserId
+        );
+      }
+    };
+
+    this.setupConnectionWatchers(pc, remoteUserId);
+  }
+
+  private setupConnectionWatchers(pc: RTCPeerConnection, remoteUserId: string) {
+    const markConnected = () => {
+      const iceSt = pc.iceConnectionState;
+      if (iceSt === 'connected' || iceSt === 'completed') {
+        this.addOrUpdateParticipant(remoteUserId);
+        this.checkAllConnected();
+      } else if (iceSt === 'failed' || iceSt === 'disconnected') {
+        this.removePeer(remoteUserId);
+      }
+    };
+
+    pc.onconnectionstatechange = markConnected;
+    pc.oniceconnectionstatechange = markConnected;
+  }
+
+  private addOrUpdateParticipant(userId: string) {
+    const s = this.state();
+    const existing = s.participants.find((p) => p.userId === userId);
+    if (existing) return;
+
+    const stream = this.remoteStreamsByPeer.get(userId) ?? null;
+
+    const participant: ParticipantInfo = {
+      userId,
+      name: this.resolveName(userId),
+      stream,
+      audioEnabled: true,
+      videoEnabled: true,
+    };
+
+    this.state.update((st) => ({
+      ...st,
+      participants: [...st.participants, participant],
+    }));
+  }
+
+  private updateParticipantStream(userId: string, stream: MediaStream) {
+    this.state.update((st) => ({
+      ...st,
+      participants: st.participants.map((p) =>
+        p.userId === userId ? { ...p, stream } : p
+      ),
+    }));
+  }
+
+  private removePeer(userId: string) {
+    const pc = this.peerConnections.get(userId);
+    if (pc) {
+      try { pc.close(); } catch (_) {}
+      this.peerConnections.delete(userId);
+    }
+    this.pendingCandidates.delete(userId);
+    this.remoteStreamsByPeer.delete(userId);
+
+    this.state.update((st) => ({
+      ...st,
+      participants: st.participants.filter((p) => p.userId !== userId),
+    }));
+  }
+
+  private checkAllConnected() {
+    const s = this.state();
+    if (s.status === 'connecting' || s.status === 'outgoing') {
+      if (s.participants.length > 0) {
+        this.state.update((st) => ({ ...st, status: 'connected' }));
+      }
+    }
+  }
+
+  private tryMarkConnected() {
+    const s = this.state().status;
+    if (s === 'connecting' || s === 'outgoing') {
+      if (this.pc && (this.pc.connectionState === 'connected' || this.pc.iceConnectionState === 'connected' || this.pc.iceConnectionState === 'completed')) {
+        this.state.update((st) => ({ ...st, status: 'connected' }));
+        this.stopConnectionWatchdog();
+      }
+    }
+  }
+
+  private startConnectionWatchdog() {
+    this.stopConnectionWatchdog();
+    this.connectionWatchdog = setInterval(() => this.tryMarkConnected(), 500);
+    setTimeout(() => this.stopConnectionWatchdog(), 15000);
+  }
+
+  private stopConnectionWatchdog() {
+    if (this.connectionWatchdog) {
+      clearInterval(this.connectionWatchdog);
+      this.connectionWatchdog = null;
+    }
+  }
+
+  private async drainCandidates(pc: RTCPeerConnection) {
+    if (!pc) return;
+    const senderId = this.findPeerId(pc);
+    const candidates = senderId ? (this.pendingCandidates.get(senderId) || []) : (this.pendingCandidates.get('_default') || []);
+    if (senderId) this.pendingCandidates.delete(senderId);
+    else this.pendingCandidates.delete('_default');
+
     for (const c of candidates) {
       try {
-        await this.pc.addIceCandidate(new RTCIceCandidate(c));
+        await pc.addIceCandidate(new RTCIceCandidate(c));
       } catch (e) {
         console.warn('Draining ICE error:', e);
       }
     }
+  }
+
+  private findPeerId(pc: RTCPeerConnection): string | null {
+    for (const [id, p] of this.peerConnections) {
+      if (p === pc) return id;
+    }
+    return null;
   }
 
   private getMedia(kind: CallKind): Promise<MediaStream> {
@@ -309,6 +682,16 @@ export class CallService {
     });
   }
 
+  private extractConversationId(msg: any): string | null {
+    if (msg.conversationId) return msg.conversationId;
+    if (msg.id) return msg.id;
+    return null;
+  }
+
+  private shouldCreateOfferer(remoteUserId: string): boolean {
+    return this.myId < remoteUserId;
+  }
+
   private clearRingTimeout() {
     if (this.ringTimeout) {
       clearTimeout(this.ringTimeout);
@@ -316,7 +699,7 @@ export class CallService {
     }
   }
 
-  private clearTimeouts() {
+  private clearAllTimeouts() {
     this.clearRingTimeout();
     if (this.endedTimeout) {
       clearTimeout(this.endedTimeout);
@@ -333,6 +716,12 @@ export class CallService {
     } catch (_) {}
     try { this.pc?.close(); } catch (_) {}
     this.pc = null;
+    for (const [id, p] of this.peerConnections) {
+      try { p.close(); } catch (_) {}
+    }
+    this.peerConnections.clear();
+    this.remoteStreamsByPeer.clear();
+    this.pendingCandidates.clear();
     this.localStream.set(null);
     this.remoteStream.set(null);
     this.micEnabled.set(true);

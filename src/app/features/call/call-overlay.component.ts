@@ -1,4 +1,4 @@
-import { Component, effect, inject } from '@angular/core';
+import { Component, effect, inject, viewChild, ElementRef, computed } from '@angular/core';
 import { CallService } from '../../core/services/call.service';
 
 @Component({
@@ -9,10 +9,29 @@ import { CallService } from '../../core/services/call.service';
 })
 export class CallOverlayComponent {
   readonly call = inject(CallService);
+  private readonly remoteAudio = viewChild<ElementRef<HTMLAudioElement>>('remoteAudio');
 
   private ringAudio: HTMLAudioElement | null = null;
 
+  readonly gridClass = computed(() => {
+    const count = this.call.state().participants.length + 1;
+    if (count <= 2) return '2';
+    if (count <= 4) return '4';
+    if (count <= 6) return '6';
+    return '9';
+  });
+
   constructor() {
+    effect(() => {
+      const stream = this.call.remoteStream();
+      const kind = this.call.state().kind;
+      const audioEl = this.remoteAudio()?.nativeElement;
+      if (stream && kind === 'audio' && audioEl) {
+        audioEl.srcObject = stream;
+        audioEl.play().catch(() => {});
+      }
+    });
+
     effect(() => {
       const status = this.call.state().status;
       if (status === 'incoming' || status === 'outgoing') {

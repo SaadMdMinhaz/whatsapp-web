@@ -23,18 +23,6 @@ time { color: #8696a0; font-size: 0.75rem; white-space: nowrap; }
 .call-actions { display: flex; gap: 0.15rem; margin-right: 0.25rem; }
 .call-actions button { width: 2.5rem; height: 2.5rem; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: #54656f; cursor: pointer; }
 .call-actions button:hover { background: #d9e4df; }
-.call-end-btn { color: #ef4444 !important; }
-.call-end-btn:hover { background: #fee2e2 !important; }
-.call-banner { padding: 0.5rem 1rem; background: #0f766e; color: #ffffff; font-size: 0.85rem; text-align: center; }
-.call-overlay { position: relative; background: #1a1a2e; min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.call-videos { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-.remote-video { width: 100%; max-height: 400px; object-fit: contain; border-radius: 0.5rem; background: #000; }
-.local-video { position: absolute; bottom: 1rem; right: 1rem; width: 120px; height: 160px; object-fit: cover; border-radius: 0.5rem; border: 2px solid #ffffff44; background: #000; z-index: 2; }
-.call-controls { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; padding: 1rem 0; z-index: 2; }
-.call-status-text { color: #ffffff; font-size: 1rem; font-weight: 500; }
-.call-end-big { width: 3.5rem !important; height: 3.5rem !important; border-radius: 50% !important; background: #ef4444 !important; color: #ffffff !important; display: grid; place-items: center; }
-.call-end-big:hover { background: #dc2626 !important; }
-.call-ended-banner { padding: 0.75rem 1rem; background: #374151; color: #d1d5db; font-size: 0.9rem; text-align: center; }
 .header-actions { display: flex; gap: 0.25rem; position: relative; }
 .header-actions button { width: 2.5rem; height: 2.5rem; display: grid; place-items: center; border: 0; border-radius: 999px; background: transparent; color: #54656f; cursor: pointer; }
 .header-actions button:hover { background: #d9e4df; }

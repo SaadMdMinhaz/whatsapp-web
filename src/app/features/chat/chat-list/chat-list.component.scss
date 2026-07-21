@@ -118,6 +118,16 @@ h1 {
     flex-shrink: 0;
 }
 
+.avatar-btn {
+    border: 0;
+    cursor: pointer;
+    transition: transform 0.15s;
+    padding: 0;
+}
+.avatar-btn:hover {
+    transform: scale(1.08);
+}
+
 .chat-summary {
     min-width: 0;
 }
@@ -333,4 +343,126 @@ time {
     .empty-chat {
         display: none;
     }
+}
+
+.profile-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-end;
+}
+
+.profile-panel {
+    width: 380px;
+    max-width: 100%;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: #f0f4f2;
+    flex-shrink: 0;
+}
+
+.profile-header button {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #54656f;
+    cursor: pointer;
+}
+
+.profile-header button:hover {
+    background: #d9e4df;
+}
+
+.profile-header h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111b21;
+}
+
+.profile-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1.5rem;
+}
+
+.profile-avatar {
+    width: 6rem;
+    height: 6rem;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: #0f766e;
+    color: #fff;
+    font-weight: 700;
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.profile-body h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #111b21;
+}
+
+.profile-sub {
+    margin: 0.2rem 0 0;
+    color: #8696a0;
+    font-size: 0.9rem;
+}
+
+.profile-details {
+    width: 100%;
+    margin-top: 1.5rem;
+}
+
+.profile-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid #edf2f0;
+}
+
+.profile-row:last-child {
+    border-bottom: none;
+}
+
+.profile-row svg {
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+}
+
+.profile-row div {
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-row label {
+    font-size: 0.8rem;
+    color: #8696a0;
+}
+
+.profile-row span {
+    font-size: 0.95rem;
+    color: #111b21;
 }

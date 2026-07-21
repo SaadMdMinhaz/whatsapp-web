@@ -29,6 +29,8 @@ export class ChatListComponent implements OnInit {
   readonly groupSearchResults = signal<UserProfileResponse[]>([]);
   readonly selectedMembers = signal<UserProfileResponse[]>([]);
 
+  readonly selectedProfile = signal<UserProfileResponse | null>(null);
+
   readonly threads = computed(() => {
     const term = this.query().trim().toLowerCase();
     if (!term) return this.chat.activeThreads();
@@ -139,5 +141,31 @@ export class ChatListComponent implements OnInit {
       return `You: ${thread.lastMessage}`;
     }
     return thread.lastMessage;
+  }
+
+  showProfile(userId: string, event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const cached = this.chat.getUserProfile(userId);
+    if (cached) {
+      this.selectedProfile.set(cached);
+    } else {
+      this.userService.getUser(userId).subscribe({
+        next: (profile) => {
+          this.chat.fetchAndCacheProfile(userId);
+          this.selectedProfile.set(profile);
+        },
+      });
+    }
+  }
+
+  closeProfile() {
+    this.selectedProfile.set(null);
+  }
+
+  getProfileAvatar(): string {
+    const p = this.selectedProfile();
+    if (!p) return '?';
+    return (p.displayName || p.username || '?').charAt(0).toUpperCase();
   }
 }

@@ -5,6 +5,7 @@ import { AuthService, AuthResponse } from './auth.service';
 import { WebSocketService } from './websocket.service';
 import { UserService, UserProfileResponse } from './user.service';
 import { ChatFacade } from './chat.facade';
+import { CallService } from './call.service';
 import { Observable, tap, throwError } from 'rxjs';
 
 const TOKEN_KEY = 'connectly.accessToken';
@@ -53,6 +54,8 @@ export class SessionService {
 
   connectWebSocket(token: string) {
     const chatFacade = this.injector.get(ChatFacade);
+    const callService = this.injector.get(CallService);
+    callService.init();
     this.wsService.connect(
       token,
       (msg) => chatFacade.handleIncomingMessage(msg),

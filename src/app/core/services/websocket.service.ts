@@ -19,13 +19,20 @@ export interface ReadMessage {
   conversationId: string;
 }
 
+export type CallMessageKind = 'offer' | 'answer' | 'iceCandidate' | 'end' | 'group.join';
+
+export interface InboundCallMessage {
+  kind: CallMessageKind;
+  payload: any;
+}
+
 @Injectable({ providedIn: 'root' })
 export class WebSocketService {
   private client: Client | null = null;
   private conversationSubscriptions = new Map<string, StompSubscription>();
-  private callSubscriptions = new Map<string, StompSubscription>();
   private pendingConversationSubscriptions = new Map<string, (msg: any) => void>();
-  private pendingCallSubscriptions = new Map<string, { type: string; callback: (msg: any) => void }>();
+  private incomingCallSubscription: StompSubscription | null = null;
+  private pendingIncomingCallCallback: ((msg: InboundCallMessage) => void) | null = null;
   private baseCallbacks: {
     onMessage: (msg: any) => void;
     onPresence: (msg: PresenceMessage) => void;
@@ -38,9 +45,13 @@ export class WebSocketService {
     onMessage: (msg: any) => void,
     onPresence: (msg: PresenceMessage) => void,
     onTyping: (msg: TypingMessage) => void,
-    onRead: (msg: ReadMessage) => void
+    onRead: (msg: ReadMessage) => void,
+    onIncomingCall?: (msg: InboundCallMessage) => void
   ): void {
     this.baseCallbacks = { onMessage, onPresence, onTyping, onRead };
+    if (onIncomingCall) {
+      this.pendingIncomingCallCallback = onIncomingCall;
+    }
 
     if (this.client?.connected) {
       return;
@@ -96,19 +107,15 @@ export class WebSocketService {
       this.baseCallbacks!.onRead(JSON.parse(message.body));
     });
 
+    if (this.pendingIncomingCallCallback) {
+      this.subscribeIncomingCalls(this.pendingIncomingCallCallback);
+    }
+
     for (const [conversationId, callback] of this.pendingConversationSubscriptions) {
       const sub = this.client.subscribe(`/topic/messages/${conversationId}`, (message: IMessage) => {
         callback(JSON.parse(message.body));
       });
       this.conversationSubscriptions.set(conversationId, sub);
-    }
-
-    for (const [key, entry] of this.pendingCallSubscriptions) {
-      const conversationId = key.split(':').pop()!;
-      const sub = this.client.subscribe(`/topic/call.${entry.type}.${conversationId}`, (message: IMessage) => {
-        entry.callback(JSON.parse(message.body));
-      });
-      if (sub) this.callSubscriptions.set(key, sub);
     }
   }
 
@@ -131,49 +138,21 @@ export class WebSocketService {
     }
   }
 
-  subscribeToCallOffer(conversationId: string, callback: (msg: any) => void) {
-    const key = `offer:${conversationId}`;
-    this.pendingCallSubscriptions.set(key, { type: 'offer', callback });
-    this.callSubscriptions.get(key)?.unsubscribe();
-    const sub = this.subscribeTopic(`/topic/call.offer.${conversationId}`, callback);
-    if (sub) this.callSubscriptions.set(key, sub);
-  }
-
-  subscribeToCallAnswer(conversationId: string, callback: (msg: any) => void) {
-    const key = `answer:${conversationId}`;
-    this.pendingCallSubscriptions.set(key, { type: 'answer', callback });
-    this.callSubscriptions.get(key)?.unsubscribe();
-    const sub = this.subscribeTopic(`/topic/call.answer.${conversationId}`, callback);
-    if (sub) this.callSubscriptions.set(key, sub);
-  }
-
-  subscribeToIceCandidate(conversationId: string, callback: (msg: any) => void) {
-    const key = `ice:${conversationId}`;
-    this.pendingCallSubscriptions.set(key, { type: 'iceCandidate', callback });
-    this.callSubscriptions.get(key)?.unsubscribe();
-    const sub = this.subscribeTopic(`/topic/call.iceCandidate.${conversationId}`, callback);
-    if (sub) this.callSubscriptions.set(key, sub);
-  }
-
-  subscribeToCallEnd(conversationId: string, callback: (msg: any) => void) {
-    const key = `end:${conversationId}`;
-    this.pendingCallSubscriptions.set(key, { type: 'end', callback });
-    this.callSubscriptions.get(key)?.unsubscribe();
-    const sub = this.subscribeTopic(`/topic/call.end.${conversationId}`, callback);
-    if (sub) this.callSubscriptions.set(key, sub);
-  }
-
-  unsubscribeCallTopic(conversationId: string) {
-    for (const [key, sub] of this.callSubscriptions) {
-      if (key.endsWith(`:${conversationId}`)) {
-        sub.unsubscribe();
-        this.callSubscriptions.delete(key);
+  subscribeIncomingCalls(callback: (msg: InboundCallMessage) => void): void {
+    this.pendingIncomingCallCallback = callback;
+    if (this.client?.connected) {
+      if (this.incomingCallSubscription) {
+        this.incomingCallSubscription.unsubscribe();
       }
-    }
-    for (const key of this.pendingCallSubscriptions.keys()) {
-      if (key.endsWith(`:${conversationId}`)) {
-        this.pendingCallSubscriptions.delete(key);
-      }
+      this.incomingCallSubscription = this.client.subscribe('/user/queue/calls', (message: IMessage) => {
+        const body = JSON.parse(message.body);
+        let kind: CallMessageKind = 'offer';
+        if (body.kind === 'group.join') kind = 'group.join' as CallMessageKind;
+        else if (body.calleeId !== undefined) kind = 'answer';
+        else if (body.candidate !== undefined) kind = 'iceCandidate';
+        else if (body.userId !== undefined && body.sdp === undefined) kind = 'end';
+        callback({ kind, payload: body });
+      });
     }
   }
 
@@ -185,29 +164,24 @@ export class WebSocketService {
     this.publish(`/app/chat.markRead.${conversationId}`, '');
   }
 
-  sendCallOffer(conversationId: string, sdp: string, callerId: string) {
-    this.publish(`/app/call.offer.${conversationId}`, { callerId, sdp });
+  sendCallOffer(conversationId: string, sdp: string, callerId: string, targetUserId: string) {
+    this.publish(`/app/call.offer.${conversationId}`, { callerId, sdp, targetUserId });
   }
 
-  sendCallAnswer(conversationId: string, sdp: string, calleeId: string) {
-    this.publish(`/app/call.answer.${conversationId}`, { calleeId, sdp });
+  sendCallAnswer(conversationId: string, sdp: string, calleeId: string, targetUserId: string) {
+    this.publish(`/app/call.answer.${conversationId}`, { calleeId, sdp, targetUserId });
   }
 
-  sendIceCandidate(conversationId: string, candidate: string, sdpMid: string, sdpMLineIndex: number, senderId: string) {
-    this.publish(`/app/call.iceCandidate.${conversationId}`, { senderId, candidate, sdpMid, sdpMLineIndex });
+  sendIceCandidate(conversationId: string, candidate: string, sdpMid: string, sdpMLineIndex: number, senderId: string, targetUserId: string) {
+    this.publish(`/app/call.iceCandidate.${conversationId}`, { senderId, candidate, sdpMid, sdpMLineIndex, targetUserId });
   }
 
-  sendCallEnd(conversationId: string, userId: string = '') {
-    this.publish(`/app/call.end.${conversationId}`, { userId });
+  sendCallEnd(conversationId: string, userId: string = '', targetUserId: string = '') {
+    this.publish(`/app/call.end.${conversationId}`, { userId, targetUserId });
   }
 
-  private subscribeTopic(topic: string, callback: (msg: any) => void): StompSubscription | undefined {
-    if (this.client?.connected) {
-      return this.client.subscribe(topic, (message: IMessage) => {
-        callback(JSON.parse(message.body));
-      });
-    }
-    return undefined;
+  sendGroupJoin(conversationId: string, userId: string, userName: string, targetUserId: string, callKind: string, existingParticipantIds: string[] = []) {
+    this.publish(`/app/group.call.join.${conversationId}`, { userId, userName, targetUserId, callKind, existingParticipantIds });
   }
 
   private publish(destination: string, body: any) {
@@ -219,10 +193,10 @@ export class WebSocketService {
   disconnect(): void {
     this.conversationSubscriptions.forEach((sub) => sub.unsubscribe());
     this.conversationSubscriptions.clear();
-    this.callSubscriptions.forEach((sub) => sub.unsubscribe());
-    this.callSubscriptions.clear();
+    this.incomingCallSubscription?.unsubscribe();
+    this.incomingCallSubscription = null;
     this.pendingConversationSubscriptions.clear();
-    this.pendingCallSubscriptions.clear();
+    this.pendingIncomingCallCallback = null;
     if (this.client) {
       this.client.deactivate();
       this.client = null;

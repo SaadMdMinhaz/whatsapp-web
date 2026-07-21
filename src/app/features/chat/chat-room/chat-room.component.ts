@@ -1,7 +1,7 @@
 ﻿import { Component, computed, inject, signal, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { LowerCasePipe, DecimalPipe, UpperCasePipe } from '@angular/common';
+import { LowerCasePipe, DecimalPipe, UpperCasePipe, DatePipe } from '@angular/common';
 import { ChatFacade } from '../../../core/services/chat.facade';
 import { WebSocketService } from '../../../core/services/websocket.service';
 import { SessionService } from '../../../core/services/session.service';
@@ -14,7 +14,7 @@ const EMOJI_LIST = ['😀','😃','😄','😁','😅','😂','🤣','😊','�
 @Component({
   selector: 'app-chat-room',
   standalone: true,
-  imports: [RouterLink, FormsModule, LowerCasePipe, UpperCasePipe, DecimalPipe],
+  imports: [RouterLink, FormsModule, LowerCasePipe, UpperCasePipe, DecimalPipe, DatePipe],
   templateUrl: './chat-room.component.html',
   styleUrl: './chat-room.component.scss',
 })
@@ -72,7 +72,6 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
           this.chat.handleIncomingMessage(msg);
         });
         this.wsService.sendMarkRead(newId);
-        this.callService.subscribeCallTopics(newId);
       }
     });
   }
@@ -154,19 +153,41 @@ export class ChatRoomComponent implements OnInit, OnDestroy {
 
   startAudioCall() {
     const convId = this.threadId();
-    const otherUser = this.thread()?.otherUser;
-    if (convId && otherUser) {
-      const name = otherUser.displayName || otherUser.username || 'User';
-      this.callService.startCall(convId, otherUser.userId, name, 'audio');
+    if (!convId) return;
+    if (this.thread()?.type === 'GROUP') {
+      this.chat.getConversationDetail(convId).subscribe({
+        next: (detail) => {
+          const memberIds = detail.participants.map((p) => p.userId);
+          this.callService.startGroupCall(convId, memberIds, 'audio');
+        },
+      });
+    } else {
+      const otherUser = this.thread()?.otherUser;
+      if (otherUser) {
+        const profile = this.chat.getUserProfile(otherUser.userId);
+        const name = profile?.displayName || profile?.username || otherUser.displayName || otherUser.username || 'User';
+        this.callService.startCall(convId, otherUser.userId, name, 'audio');
+      }
     }
   }
 
   startVideoCall() {
     const convId = this.threadId();
-    const otherUser = this.thread()?.otherUser;
-    if (convId && otherUser) {
-      const name = otherUser.displayName || otherUser.username || 'User';
-      this.callService.startCall(convId, otherUser.userId, name, 'video');
+    if (!convId) return;
+    if (this.thread()?.type === 'GROUP') {
+      this.chat.getConversationDetail(convId).subscribe({
+        next: (detail) => {
+          const memberIds = detail.participants.map((p) => p.userId);
+          this.callService.startGroupCall(convId, memberIds, 'video');
+        },
+      });
+    } else {
+      const otherUser = this.thread()?.otherUser;
+      if (otherUser) {
+        const profile = this.chat.getUserProfile(otherUser.userId);
+        const name = profile?.displayName || profile?.username || otherUser.displayName || otherUser.username || 'User';
+        this.callService.startCall(convId, otherUser.userId, name, 'video');
+      }
     }
   }
 

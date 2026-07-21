@@ -135,13 +135,23 @@
           } @else {
             <div class="detail-info">
               <div class="detail-row">
+                <label>Phone</label>
+                <span>{{ memberProfiles()[0]?.phoneNumber || '-' }}</span>
+              </div>
+              <div class="detail-row">
                 <label>Username</label>
                 <span>{{ detail()?.participants?.[0]?.username || '-' }}</span>
               </div>
               <div class="detail-row">
                 <label>About</label>
-                <span>{{ memberProfiles()[0]?.about || '-' }}</span>
+                <span>{{ memberProfiles()[0]?.about || 'Hey there! I am using Connectly' }}</span>
               </div>
+              @if (memberProfiles()[0]?.createdAt) {
+                <div class="detail-row">
+                  <label>Joined</label>
+                  <span>{{ memberProfiles()[0]?.createdAt | date:'mediumDate' }}</span>
+                </div>
+              }
             </div>
           }
         </div>
