@@ -202,3 +202,21 @@ h1 {
 .empty-state p {
   margin: 0;
 }
+
+@media (max-width: 720px) {
+  .pane-header {
+    padding: 0.5rem 0.75rem;
+    padding-top: max(0.5rem, var(--safe-top));
+  }
+  .contact-row {
+    padding: 0.65rem 0.75rem;
+  }
+  .avatar {
+    width: 2.75rem;
+    height: 2.75rem;
+    font-size: 0.85rem;
+  }
+  .search-box {
+    padding: 0.4rem 0.75rem;
+  }
+}

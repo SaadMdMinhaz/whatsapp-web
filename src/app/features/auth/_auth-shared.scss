@@ -1,5 +1,6 @@
 ﻿.auth-page {
     min-height: 100vh;
+    min-height: 100dvh;
     display: grid;
     grid-template-columns: 1fr minmax(380px, 520px);
     background: #f0f4f2;
@@ -11,6 +12,8 @@
     flex-direction: column;
     justify-content: center;
     padding: clamp(2rem, 6vw, 5rem);
+    padding-top: clamp(2rem, 6vw, calc(5rem + var(--safe-top)));
+    padding-bottom: clamp(2rem, 6vw, calc(5rem + var(--safe-bottom)));
     background: #ffffff;
     order: 2;
 }
@@ -240,12 +243,24 @@ input:focus {
     .auth-page {
         grid-template-columns: 1fr;
     }
-
     .auth-visual {
         display: none;
     }
-
     .auth-panel {
         order: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .auth-panel {
+        padding: 1.5rem;
+        padding-top: max(1.5rem, var(--safe-top));
+        padding-bottom: max(1.5rem, var(--safe-bottom));
+    }
+    input {
+        height: 2.75rem;
+    }
+    .primary-action {
+        height: 2.75rem;
     }
 }

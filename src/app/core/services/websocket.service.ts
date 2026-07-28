@@ -19,6 +19,13 @@ export interface ReadMessage {
   conversationId: string;
 }
 
+export interface StatusUpdateMessage {
+  type: string;
+  conversationId: string;
+  readerId: string;
+  status: string;
+}
+
 export type CallMessageKind = 'offer' | 'answer' | 'iceCandidate' | 'end' | 'group.join';
 
 export interface InboundCallMessage {
@@ -38,6 +45,7 @@ export class WebSocketService {
     onPresence: (msg: PresenceMessage) => void;
     onTyping: (msg: TypingMessage) => void;
     onRead: (msg: ReadMessage) => void;
+    onStatusUpdate: (msg: StatusUpdateMessage) => void;
   } | null = null;
 
   connect(
@@ -46,9 +54,10 @@ export class WebSocketService {
     onPresence: (msg: PresenceMessage) => void,
     onTyping: (msg: TypingMessage) => void,
     onRead: (msg: ReadMessage) => void,
+    onStatusUpdate: (msg: StatusUpdateMessage) => void,
     onIncomingCall?: (msg: InboundCallMessage) => void
   ): void {
-    this.baseCallbacks = { onMessage, onPresence, onTyping, onRead };
+    this.baseCallbacks = { onMessage, onPresence, onTyping, onRead, onStatusUpdate };
     if (onIncomingCall) {
       this.pendingIncomingCallCallback = onIncomingCall;
     }
@@ -107,6 +116,10 @@ export class WebSocketService {
       this.baseCallbacks!.onRead(JSON.parse(message.body));
     });
 
+    this.client.subscribe('/user/queue/status', (message: IMessage) => {
+      this.baseCallbacks!.onStatusUpdate(JSON.parse(message.body));
+    });
+
     if (this.pendingIncomingCallCallback) {
       this.subscribeIncomingCalls(this.pendingIncomingCallCallback);
     }
@@ -146,6 +159,7 @@ export class WebSocketService {
       }
       this.incomingCallSubscription = this.client.subscribe('/user/queue/calls', (message: IMessage) => {
         const body = JSON.parse(message.body);
+        console.log('[WS] Call message received:', body);
         let kind: CallMessageKind = 'offer';
         if (body.kind === 'group.join') kind = 'group.join' as CallMessageKind;
         else if (body.calleeId !== undefined) kind = 'answer';

@@ -40,3 +40,9 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Logs
+ng-serve*.log
+
+# Deploy config (lives at parent level)
+docker-compose.yml

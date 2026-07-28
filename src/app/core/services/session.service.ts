@@ -1,4 +1,4 @@
-﻿import { Injectable, Injector, inject, signal } from '@angular/core';
+﻿import { Injectable, Injector, inject, signal, NgZone } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthUser } from '../models/chat.models';
 import { AuthService, AuthResponse } from './auth.service';
@@ -6,7 +6,7 @@ import { WebSocketService } from './websocket.service';
 import { UserService, UserProfileResponse } from './user.service';
 import { ChatFacade } from './chat.facade';
 import { CallService } from './call.service';
-import { Observable, tap, throwError } from 'rxjs';
+import { Observable, tap, throwError, fromEvent } from 'rxjs';
 
 const TOKEN_KEY = 'connectly.accessToken';
 const REFRESH_KEY = 'connectly.refreshToken';
@@ -26,7 +26,31 @@ export class SessionService {
     private readonly authService: AuthService,
     private readonly wsService: WebSocketService,
     private readonly userService: UserService,
-  ) {}
+    private readonly ngZone: NgZone,
+  ) {
+    this.listenCrossTab();
+  }
+
+  private listenCrossTab() {
+    fromEvent<StorageEvent>(window, 'storage').subscribe((event) => {
+      if (!this.currentUser()) return;
+
+      this.ngZone.run(() => {
+        if (event.key === USER_KEY && event.newValue === null) {
+          this.logout();
+          return;
+        }
+
+        if (event.key === TOKEN_KEY && event.newValue !== null && event.newValue !== event.oldValue) {
+          const newUserRaw = localStorage.getItem(USER_KEY);
+          const newUser = newUserRaw ? (JSON.parse(newUserRaw) as AuthUser) : null;
+          if (!newUser || newUser.id !== this.currentUser()!.id) {
+            this.logout();
+          }
+        }
+      });
+    });
+  }
 
   login(email: string, password: string): Observable<AuthResponse> {
     return this.authService.login(email, password).pipe(
@@ -62,6 +86,7 @@ export class SessionService {
       (presence) => chatFacade.handlePresence(presence.userId, presence.online),
       (typing) => chatFacade.handleTyping(typing.conversationId, typing.userId, typing.isTyping),
       (read) => chatFacade.handleReadReceipt(read.conversationId, read.userId),
+      (status) => chatFacade.handleStatusUpdate(status.conversationId, status.readerId, status.status),
     );
   }
 

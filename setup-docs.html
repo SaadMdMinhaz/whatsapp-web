@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connectly - Setup & Running Guide</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #111b21; color: #e9edef; line-height: 1.6; padding: 20px; }
+  .container { max-width: 960px; margin: auto; }
+  h1 { font-size: 1.8rem; margin-bottom: 4px; color: #00a884; }
+  h2 { font-size: 1.3rem; margin: 28px 0 12px; color: #00a884; border-bottom: 1px solid #2a3942; padding-bottom: 6px; }
+  h3 { font-size: 1.05rem; margin: 18px 0 8px; color: #d1d7db; }
+  .ip-box { background: #1f2c33; padding: 8px 14px; border-radius: 6px; display: inline-block; font-family: monospace; font-size: 1.1rem; color: #00a884; }
+  code { background: #1f2c33; padding: 2px 6px; border-radius: 4px; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.9em; color: #aad6fc; }
+  pre { background: #1f2c33; padding: 12px 16px; border-radius: 6px; overflow-x: auto; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.85rem; color: #aad6fc; margin: 8px 0; border-left: 3px solid #00a884; }
+  .tabs { display: flex; gap: 8px; margin: 16px 0; }
+  .tab { padding: 10px 20px; border: none; background: #1f2c33; color: #8696a0; border-radius: 6px 6px 0 0; cursor: pointer; font-size: 0.95rem; }
+  .tab.active { background: #2a3942; color: #e9edef; font-weight: 600; }
+  .tab-content { display: none; background: #1f2c33; padding: 20px; border-radius: 0 6px 6px 6px; }
+  .tab-content.active { display: block; }
+  ul, ol { padding-left: 20px; margin: 8px 0; }
+  li { margin: 6px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #2a3942; }
+  th { color: #00a884; font-weight: 600; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+  .badge-green { background: #00a88433; color: #00a884; }
+  .badge-yellow { background: #f5c54233; color: #f5c542; }
+  .note { background: #0b332b; border-left: 3px solid #00a884; padding: 10px 14px; border-radius: 4px; margin: 10px 0; font-size: 0.9rem; }
+  .warning { background: #332b0b; border-left: 3px solid #f5c542; padding: 10px 14px; border-radius: 4px; margin: 10px 0; font-size: 0.9rem; }
+  .error { background: #330b0b; border-left: 3px solid #ef4444; padding: 10px 14px; border-radius: 4px; margin: 10px 0; font-size: 0.9rem; }
+  hr { border: none; border-top: 1px solid #2a3942; margin: 24px 0; }
+  @media (max-width: 600px) { .tabs { flex-direction: column; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Connectly (WhatsApp Clone)</h1>
+<p style="color:#8696a0;margin-bottom:16px;">Full-stack messaging app with voice/video calling &mdash; setup &amp; running guide</p>
+
+<div id="current-ip" class="ip-box">&#9654; Current IP: <span id="ip-display">192.168.0.104</span></div>
+<script>fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>{let e=document.getElementById('ip-display');if(e)e.textContent=d.ip}).catch(()=>{})</script>
+
+<hr>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('quick')">&#9889; Quick Start (Daily)</button>
+  <button class="tab" onclick="switchTab('full')">&#9881; Full Setup (First Time)</button>
+</div>
+
+<div id="quick-content" class="tab-content active">
+
+<h2>Quick Start</h2>
+<p>Run this after every PC restart. Assumes JARs are already built.</p>
+
+<div class="warning">
+  <strong>First thing:</strong> Find your PC's local IP and note it.
+  Run <code>ipconfig</code> and look for <code>IPv4 Address</code> starting with <code>192.168.</code>.
+</div>
+
+<h3>1. Check prerequisites</h3>
+<table>
+  <tr><th>Item</th><th>Check</th></tr>
+  <tr><td>SQL Server</td><td><code>Get-Service MSSQLSERVER</code> &mdash; should be <span class="badge badge-green">Running</span></td></tr>
+  <tr><td>Node.js</td><td><code>node -v</code> &mdash; should be v22+</td></tr>
+  <tr><td>Java</td><td><code>java -version</code></td></tr>
+  <tr><td>Redis exe</td><td><code>C:\My Proj\redis-server\redis-server.exe</code> should exist</td></tr>
+  <tr><td>JARs</td><td><code>ls C:\My Proj\*\target\*.jar</code> should show 5 JARs</td></tr>
+</table>
+
+<h3>2. Regenerate SSL certificate</h3>
+<pre>cd "C:\My Proj\My project whatsapp"
+node gen-cert.js</pre>
+<p>This auto-detects your current 192.168.x.x IP.</p>
+
+<h3>3. Start Redis</h3>
+<pre>Start-Process -FilePath "C:\My Proj\redis-server\redis-server.exe" -WindowStyle Hidden</pre>
+
+<h3>4. Start backend services (5 JARs)</h3>
+<pre>$w = "C:\My Proj"
+Start-Process -FilePath "java" -ArgumentList "-jar", "`"$w\whatsapp-auth\target\auth-server-0.0.1-SNAPSHOT.jar`"" -WorkingDirectory "$w\whatsapp-auth" -WindowStyle Hidden
+Start-Sleep 8
+Start-Process -FilePath "java" -ArgumentList "-jar", "`"$w\user-service\target\user-service-1.0.0.jar`"" -WorkingDirectory "$w\user-service" -WindowStyle Hidden
+Start-Process -FilePath "java" -ArgumentList "-jar", "`"$w\media-service\target\media-service-1.0.0.jar`"" -WorkingDirectory "$w\media-service" -WindowStyle Hidden
+Start-Sleep 5
+Start-Process -FilePath "java" -ArgumentList "-jar", "`"$w\chat-service\target\chat-service-1.0.0.jar`"" -WorkingDirectory "$w\chat-service" -WindowStyle Hidden
+Start-Process -FilePath "java" -ArgumentList "-jar", "`"$w\gateway-service\target\gateway-service-1.0.0.jar`"" -WorkingDirectory "$w\gateway-service" -WindowStyle Hidden</pre>
+
+<h3>5. Serve Angular frontend</h3>
+<pre>cd "C:\My Proj\My project whatsapp"
+npx ng serve --host 0.0.0.0 --port 51772 --ssl --ssl-cert "certs/cert.pem" --ssl-key "certs/key.pem"</pre>
+
+<h3>6. Open firewall ports (run as Admin)</h3>
+<pre>New-NetFirewallRule -DisplayName "Connectly 8080-8084" -Direction Inbound -LocalPort 8080,8081,8082,8083,8084 -Protocol TCP -Action Allow
+New-NetFirewallRule -DisplayName "Connectly Frontend 51772" -Direction Inbound -LocalPort 51772 -Protocol TCP -Action Allow</pre>
+
+<h3>7. Verify everything is running</h3>
+<pre>netstat -an | Select-String ":808[0-4].*LISTEN"
+Get-Process -Name "java","redis-server"</pre>
+
+<h3>8. Access from any device</h3>
+<p>Open browser on another device on the same WiFi and go to:</p>
+<pre>https://192.168.0.104:51772</pre>
+<p>Accept the self-signed certificate warning (it's safe - your PC generated it).</p>
+
+</div>
+
+<div id="full-content" class="tab-content">
+
+<h2>Full Setup (First Time)</h2>
+<p>Complete setup from scratch - including building all services.</p>
+
+<h3>1. Install prerequisites</h3>
+<table>
+  <tr><th>Software</th><th>Version</th><th>Notes</th></tr>
+  <tr><td>SQL Server 2022</td><td>Any</td><td>Login: <code>sa</code> / <code>YourPassword123</code></td></tr>
+  <tr><td>Redis</td><td>Latest</td><td>Exe at <code>C:\My Proj\redis-server\redis-server.exe</code></td></tr>
+  <tr><td>Java JDK</td><td>18+</td><td>Runtime must be available via <code>java -version</code></td></tr>
+  <tr><td>Node.js</td><td>22+</td><td>Includes npm</td></tr>
+  <tr><td>Angular CLI</td><td>19+</td><td><code>npm install -g @angular/cli</code></td></tr>
+</table>
+
+<h3>2. Create SQL Server databases</h3>
+<pre>CREATE DATABASE whatsapp_auth;
+CREATE DATABASE whatsapp_users;</pre>
+
+<p>Backend services auto-create tables via Hibernate ddl-auto.</p>
+
+<h3>3. Clone / restore all 6 repos</h3>
+<table>
+  <tr><th>Service</th><th>Port</th><th>Directory</th></tr>
+  <tr><td>Auth</td><td>8080</td><td><code>C:\My Proj\whatsapp-auth</code></td></tr>
+  <tr><td>User</td><td>8081</td><td><code>C:\My Proj\user-service</code></td></tr>
+  <tr><td>Chat</td><td>8082</td><td><code>C:\My Proj\chat-service</code></td></tr>
+  <tr><td>Media</td><td>8083</td><td><code>C:\My Proj\media-service</code></td></tr>
+  <tr><td>Gateway</td><td>8084</td><td><code>C:\My Proj\gateway-service</code></td></tr>
+  <tr><td>Frontend</td><td>51772</td><td><code>C:\My Proj\My project whatsapp</code></td></tr>
+</table>
+
+<h3>4. Build all Java services</h3>
+<p>Each service uses Maven wrapper. Run in each service directory:</p>
+<pre>.\mvnw.cmd "-DskipTests" package -q</pre>
+<p>Build order: auth &rarr; user &rarr; media &rarr; chat &rarr; gateway</p>
+
+<h3>5. Generate SSL certificate</h3>
+<pre>cd "C:\My Proj\My project whatsapp"
+npm install selfsigned
+node gen-cert.js</pre>
+
+<h3>6. Install frontend dependencies</h3>
+<pre>cd "C:\My Proj\My project whatsapp"
+npm install</pre>
+
+<h3>7. Start everything (steps 3-6 from Quick Start)</h3>
+<p>Follow steps 3 through 6 of the <strong>Quick Start</strong> tab above.</p>
+
+<h3>8. Build the Angular frontend (if first time)</h3>
+<pre>powershell -ExecutionPolicy Bypass -Command "npx ng build"</pre>
+
+</div>
+
+<hr>
+
+<h2>Architecture Overview</h2>
+<table>
+  <tr><th>Port</th><th>Service</th><th>JAR Name</th><th>Purpose</th></tr>
+  <tr><td>8080</td><td>whatsapp-auth</td><td><code>auth-server-0.0.1-SNAPSHOT.jar</code></td><td>Login, register, JWT tokens</td></tr>
+  <tr><td>8081</td><td>user-service</td><td><code>user-service-1.0.0.jar</code></td><td>User profiles, search, block</td></tr>
+  <tr><td>8082</td><td>chat-service</td><td><code>chat-service-1.0.0.jar</code></td><td>Messages, conversations, groups</td></tr>
+  <tr><td>8083</td><td>media-service</td><td><code>media-service-1.0.0.jar</code></td><td>File upload/download</td></tr>
+  <tr><td>8084</td><td>gateway-service</td><td><code>gateway-service-1.0.0.jar</code></td><td>WebSocket hub, real-time routing</td></tr>
+  <tr><td>51772</td><td>Angular Frontend</td><td>&mdash;</td><td>HTTPS UI served with dev server</td></tr>
+</table>
+
+<h3>Data Flow</h3>
+<pre>
+Browser (https://YOUR_IP:51772)
+  |
+  |-- /api/v1/auth/* ------------> Auth (8080)
+  |-- /api/v1/users/* -----------> User (8081)
+  |-- /api/v1/chats/* -----------> Chat (8082) ----> Gateway (8084) ----> WebSocket to other users
+  |-- /api/v1/media/* -----------> Media (8083)
+  |-- /ws (SockJS/STOMP) -------> Gateway (8084)
+</pre>
+
+<h2>Troubleshooting</h2>
+
+<h3>Ports not listening after starting</h3>
+<ul>
+  <li>Wait 15-30 seconds for Spring Boot to initialize</li>
+  <li>Check logs: <code>Get-Content "C:\My Proj\logs\*.err"</code></li>
+  <li>Check if SQL Server is running</li>
+</ul>
+
+<h3>Cross-device "Connection refused"</h3>
+<ul>
+  <li>Ensure both devices are on the same WiFi network</li>
+  <li>Run firewall rules as Administrator</li>
+  <li>Disable Windows Defender Firewall temporarily to test</li>
+</ul>
+
+<h3>WebSocket / STOMP connection fails</h3>
+<ul>
+  <li>Check that gateway-service is running on port 8084</li>
+  <li>Check browser console for CORS errors</li>
+  <li>Use HTTPS (required for camera/mic access on other devices)</li>
+</ul>
+
+<h3>Self-signed cert warning</h3>
+<ul>
+  <li>Click "Advanced" &rarr; "Proceed to site" in Chrome</li>
+  <li>This is safe - the cert is generated locally by gen-cert.js</li>
+</ul>
+
+<h3>Camera / Mic not working on other device</h3>
+<ul>
+  <li>The page MUST be served over HTTPS (which it is via <code>--ssl</code>)</li>
+  <li>Accept the camera/mic permission prompt on the other device</li>
+</ul>
+
+<hr>
+
+<h2>Quick Reference (One-Liner Start)</h2>
+<p>Paste this entire block into an elevated PowerShell to start everything at once:</p>
+<pre style="font-size:0.8rem;max-height:400px;overflow-y:auto;">
+# === CONFIG ===
+$w = "C:\My Proj"
+$fe = "$w\My project whatsapp"
+$log = "$w\logs"
+New-Item -ItemType Directory -Path $log -Force | Out-Null
+
+# === SSL CERT ===
+cd $fe; node gen-cert.js
+
+# === REDIS ===
+Get-Process -Name "redis-server" -ErrorAction SilentlyContinue
+if (-not $?) { Start-Process -FilePath "$w\redis-server\redis-server.exe" -WindowStyle Hidden }
+
+# === BACKEND SERVICES ===
+Start-Process -FilePath "java" -ArgumentList "-jar", "`"$w\whatsapp-auth\target\auth-server-0.0.1-SNAPSHOT.jar`"" -WorkingDirectory "$w\whatsapp-auth" -WindowStyle Hidden
+Start-Sleep 8
+Start-Process -FilePath "java" -ArgumentList "-jar", "`"$w\user-service\target\user-service-1.0.0.jar`"" -WorkingDirectory "$w\user-service" -WindowStyle Hidden
+Start-Process -FilePath "java" -ArgumentList "-jar", "`"$w\media-service\target\media-service-1.0.0.jar`"" -WorkingDirectory "$w\media-service" -WindowStyle Hidden
+Start-Process -FilePath "java" -ArgumentList "-jar", "`"$w\chat-service\target\chat-service-1.0.0.jar`"" -WorkingDirectory "$w\chat-service" -WindowStyle Hidden
+Start-Process -FilePath "java" -ArgumentList "-jar", "`"$w\gateway-service\target\gateway-service-1.0.0.jar`"" -WorkingDirectory "$w\gateway-service" -WindowStyle Hidden
+Start-Sleep 15
+
+# === FIREWALL ===
+New-NetFirewallRule -DisplayName "Connectly 8080-8084" -Direction Inbound -LocalPort 8080,8081,8082,8083,8084 -Protocol TCP -Action Allow -ErrorAction SilentlyContinue
+New-NetFirewallRule -DisplayName "Connectly Frontend 51772" -Direction Inbound -LocalPort 51772 -Protocol TCP -Action Allow -ErrorAction SilentlyContinue
+
+# === VERIFY ===
+netstat -an | Select-String ":808[0-4].*LISTEN"
+Write-Output "=== All services started ==="
+$ip = (ipconfig | Select-String "IPv4.*192\.168\.").ToString().Trim().Split()[-1]
+Write-Output "Open https://${ip}:51772 on another device"
+
+# === FRONTEND (run this last in a separate terminal) ===
+# cd "$fe"; npx ng serve --host 0.0.0.0 --port 51772 --ssl --ssl-cert "certs/cert.pem" --ssl-key "certs/key.pem"
+</pre>
+
+<p style="color:#8696a0;margin-top:24px;font-size:0.85rem;">
+  Generated: <span id="gen-date"></span> &bull; DOC_VERSION: 1.0.0
+</p>
+
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.tab[onclick*="${name}"]`).classList.add('active');
+  document.getElementById(`${name}-content`).classList.add('active');
+}
+document.getElementById('gen-date').textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+</script>
+</body>
+</html>

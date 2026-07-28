@@ -3,6 +3,7 @@ import { ChatService, ConversationResponse, MessageResponse, SendMessageRequest,
 import { MediaService } from './media.service';
 import { UserService, UserProfileResponse } from './user.service';
 import { SessionService } from './session.service';
+import { WebSocketService } from './websocket.service';
 import { ChatMessage, ChatThread, Participant } from '../models/chat.models';
 
 @Injectable({ providedIn: 'root' })
@@ -11,6 +12,7 @@ export class ChatFacade {
   private readonly mediaService = inject(MediaService);
   private readonly userService = inject(UserService);
   private readonly session = inject(SessionService);
+  private readonly wsService = inject(WebSocketService);
   private readonly injector = inject(Injector);
 
   readonly threads = signal<ChatThread[]>([]);
@@ -21,7 +23,13 @@ export class ChatFacade {
   private readonly profileCache = new Map<string, UserProfileResponse>();
 
   readonly activeThreads = computed(() =>
-    this.threads().filter((t) => !t.archived)
+    this.threads()
+      .filter((t) => !t.archived)
+      .sort((a, b) => {
+        if (!a.lastMessageTimestamp) return 1;
+        if (!b.lastMessageTimestamp) return -1;
+        return new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime();
+      })
   );
 
   readonly sortedMessages = computed(() =>
@@ -58,11 +66,15 @@ export class ChatFacade {
     this.chatService.getMessages(conversationId, page, size).subscribe({
       next: (pageData) => {
         const mapped = pageData.messages.map((m) => this.mapMessage(m, conversationId));
-        if (page === 0) {
-          this.messages.set(mapped);
-        } else {
-          this.messages.update((prev) => [...mapped, ...prev]);
-        }
+        this.messages.update((prev) => {
+          const otherConv = prev.filter((m) => m.conversationId !== conversationId);
+          if (page === 0) {
+            return [...otherConv, ...mapped];
+          } else {
+            const currentConv = prev.filter((m) => m.conversationId === conversationId);
+            return [...otherConv, ...mapped, ...currentConv];
+          }
+        });
       },
       error: (err) => console.error('Failed to load messages:', err),
     });
@@ -73,11 +85,14 @@ export class ChatFacade {
     this.chatService.sendMessage(conversationId, request).subscribe({
       next: (msg) => {
         const mapped = this.mapMessage(msg, conversationId);
-        this.messages.update((prev) => [...prev, mapped]);
+        this.messages.update((prev) => {
+          if (prev.find((m) => m.id === mapped.id)) return prev;
+          return [...prev, mapped];
+        });
         this.threads.update((threads) =>
           threads.map((t) =>
             t.id === conversationId
-              ? { ...t, lastMessage: content, lastMessageAt: this.formatTime(msg.createdAt) }
+              ? { ...t, lastMessage: content, lastMessageAt: this.formatTime(msg.createdAt), lastMessageTimestamp: msg.createdAt }
               : t
           )
         );
@@ -98,7 +113,11 @@ export class ChatFacade {
         };
         this.chatService.sendMessage(conversationId, request).subscribe({
           next: (msg) => {
-            this.messages.update((prev) => [...prev, this.mapMessage(msg, conversationId)]);
+            const mapped = this.mapMessage(msg, conversationId);
+            this.messages.update((prev) => {
+              if (prev.find((m) => m.id === mapped.id)) return prev;
+              return [...prev, mapped];
+            });
           },
           error: (err) => console.error('Failed to send media message:', err),
         });
@@ -133,6 +152,12 @@ export class ChatFacade {
     );
   }
 
+  private activeConversationId = '';
+
+  setActiveConversation(conversationId: string) {
+    this.activeConversationId = conversationId;
+  }
+
   handleIncomingMessage(msg: any) {
     const msgId = msg.id || msg.messageId || '';
     const convId = msg.conversationId || msg.conversationId || '';
@@ -161,12 +186,19 @@ export class ChatFacade {
       createdAt,
       updatedAt: msg.updatedAt || '',
     };
+
+    let wasAdded = false;
     this.messages.update((prev) => {
       if (prev.find((m) => m.id === msgId)) return prev;
+      wasAdded = true;
       return [...prev, mapped];
     });
+
+    if (!wasAdded) return;
+
     const existing = this.threads().find((t) => t.id === convId);
     if (existing) {
+      const isViewingThisChat = this.activeConversationId === convId;
       this.threads.update((threads) =>
         threads.map((t) =>
           t.id === convId
@@ -174,11 +206,18 @@ export class ChatFacade {
                 ...t,
                 lastMessage: content || `[${messageType}]`,
                 lastMessageAt: this.formatTime(createdAt),
-                unreadCount: t.unreadCount + 1,
+                lastMessageTimestamp: createdAt,
+                unreadCount: isViewingThisChat ? 0 : t.unreadCount + 1,
               }
             : t
         )
       );
+      if (isViewingThisChat && senderId !== this.session.currentUser()?.id) {
+        this.chatService.markAsRead(convId).subscribe({
+          error: (err) => console.error('Failed to mark as read on incoming message:', err),
+        });
+        this.wsService.sendMarkRead(convId);
+      }
     } else {
       this.loadConversations();
     }
@@ -211,13 +250,29 @@ export class ChatFacade {
   }
 
   handleReadReceipt(conversationId: string, userId: string) {
+    const currentUserId = this.session.currentUser()?.id;
+    if (!currentUserId) return;
     this.messages.update((msgs) =>
       msgs.map((m) =>
-        m.senderId !== userId && m.conversationId === conversationId
+        m.senderId === currentUserId && m.conversationId === conversationId
           ? { ...m, status: 'READ' as const }
           : m
       )
     );
+  }
+
+  handleStatusUpdate(conversationId: string, readerId: string, status: string) {
+    if (status === 'READ') {
+      const currentUserId = this.session.currentUser()?.id;
+      if (!currentUserId) return;
+      this.messages.update((msgs) =>
+        msgs.map((m) =>
+          m.senderId === currentUserId && m.conversationId === conversationId
+            ? { ...m, status: 'READ' as const }
+            : m
+        )
+      );
+    }
   }
 
   getThread(threadId: string): ChatThread | undefined {
@@ -284,7 +339,7 @@ export class ChatFacade {
   }
 
   clearMessages(conversationId: string) {
-    this.messages.set([]);
+    this.messages.update((msgs) => msgs.filter((m) => m.conversationId !== conversationId));
   }
 
   private mapConversation(c: ConversationResponse): ChatThread {
@@ -326,6 +381,7 @@ export class ChatFacade {
         ? c.lastMessage.content || `[${c.lastMessage.messageType}]`
         : '',
       lastMessageAt: c.lastMessage ? this.formatTime(c.lastMessage.createdAt) : '',
+      lastMessageTimestamp: c.lastMessage?.createdAt || '',
       lastMessageSenderId: c.lastMessage?.senderId || '',
       archived: false,
       otherUser,

@@ -105,7 +105,12 @@ export class CallService {
 
   async startCall(conversationId: string, remoteUserId: string, remoteName: string, kind: CallKind) {
     const status = this.state().status;
-    if (status !== 'idle' && status !== 'ended') return;
+    if (status !== 'idle' && status !== 'ended') {
+      console.warn('[Call] Cannot start - status:', status);
+      return;
+    }
+
+    console.log('[Call] Starting 1-on-1 call to', remoteUserId, 'kind:', kind);
 
     this.clearAllTimeouts();
     this.cleanup();
@@ -166,6 +171,12 @@ export class CallService {
         participants: [],
       });
 
+      // Send group.join to each member so they know we joined
+      for (const memberId of this.groupMemberIds) {
+        this.ws.sendGroupJoin(conversationId, this.myId, this.resolveName(this.myId), memberId, kind, []);
+      }
+
+      // Create offers to members where we are the offerer (smaller ID)
       for (const memberId of this.groupMemberIds) {
         if (this.shouldCreateOfferer(memberId)) {
           await this.createGroupPeer(conversationId, stream, memberId);
@@ -176,8 +187,6 @@ export class CallService {
             this.ws.sendCallOffer(conversationId, JSON.stringify({ sdp: offer, kind, isGroup: true }), this.myId, memberId);
           }
         }
-        // If we should NOT create offerer (our ID > memberId),
-        // the other side will send us an offer when they get group.join
       }
 
       this.ringTimeout = setTimeout(() => {
@@ -194,6 +203,7 @@ export class CallService {
 
   private async handleOffer(msg: any) {
     const callerId: string = msg.callerId || '';
+    console.log('[Call] Received offer from', callerId, 'myId:', this.myId);
     if (callerId && callerId === this.myId) return;
 
     const conversationId = this.extractConversationId(msg);
@@ -401,6 +411,10 @@ export class CallService {
     const stream = this.localStream();
     if (!stream || !s.conversationId) return;
 
+    // Tell the new participant about all existing peers we know about
+    const existingIds = Array.from(this.peerConnections.keys());
+    this.ws.sendGroupJoin(s.conversationId, this.myId, this.resolveName(this.myId), newParticipantId, s.kind, existingIds);
+
     // Ownership model: smaller ID is the offerer
     if (this.shouldCreateOfferer(newParticipantId)) {
       await this.createGroupPeer(s.conversationId, stream, newParticipantId);
@@ -411,9 +425,6 @@ export class CallService {
         this.ws.sendCallOffer(s.conversationId, JSON.stringify({ sdp: offer, kind: s.kind, isGroup: true }), this.myId, newParticipantId);
       }
     }
-    // If we are NOT the offerer, we do nothing here.
-    // The new participant will send us an offer (via handleOffer),
-    // which will create the answerer peer for us.
   }
 
   private async handleRemoteEnd(msg: any) {

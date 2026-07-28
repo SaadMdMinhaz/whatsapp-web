@@ -1,5 +1,6 @@
 ﻿import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { loginGuard } from './core/guards/login.guard';
 import { LoginComponent } from './features/auth/login/login.component';
 import { RegisterComponent } from './features/auth/register/register.component';
 import { ChatListComponent } from './features/chat/chat-list/chat-list.component';
@@ -11,8 +12,8 @@ import { ContactsComponent } from './features/contacts/contacts.component';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
-  { path: 'login', component: LoginComponent },
-  { path: 'register', component: RegisterComponent },
+  { path: 'login', component: LoginComponent, canActivate: [loginGuard] },
+  { path: 'register', component: RegisterComponent, canActivate: [loginGuard] },
   {
     path: 'app',
     component: DashboardComponent,

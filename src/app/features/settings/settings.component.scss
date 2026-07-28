@@ -92,3 +92,13 @@ h1 {
 .toggle.active .toggle-knob {
   left: calc(2.5rem - 1rem - 2px);
 }
+
+@media (max-width: 720px) {
+  .page-header {
+    padding: 0.5rem 1rem;
+    padding-top: max(0.5rem, var(--safe-top));
+  }
+  .setting-item {
+    padding: 0.85rem 1rem;
+  }
+}

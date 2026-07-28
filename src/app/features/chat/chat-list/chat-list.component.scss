@@ -1,5 +1,5 @@
 ﻿.whatsapp-layout {
-    height: 100vh;
+    height: 100%;
     min-height: 0;
     display: grid;
     grid-template-columns: 410px minmax(0, 1fr);
@@ -21,6 +21,7 @@
     justify-content: space-between;
     gap: 1rem;
     padding: 0.75rem 1rem;
+    padding-top: max(0.75rem, var(--safe-top));
     background: #f0f4f2;
 }
 
@@ -157,6 +158,10 @@ time {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+.chat-summary p.unread-bold {
+    font-weight: 700;
+    color: #111b21;
 }
 
 .unread {
@@ -335,16 +340,6 @@ time {
   cursor: not-allowed;
 }
 
-@media (max-width: 900px) {
-    .whatsapp-layout {
-        grid-template-columns: 1fr;
-    }
-
-    .empty-chat {
-        display: none;
-    }
-}
-
 .profile-overlay {
     position: fixed;
     inset: 0;
@@ -370,6 +365,7 @@ time {
     align-items: center;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
+    padding-top: max(0.75rem, var(--safe-top));
     background: #f0f4f2;
     flex-shrink: 0;
 }
@@ -465,4 +461,30 @@ time {
 .profile-row span {
     font-size: 0.95rem;
     color: #111b21;
+}
+
+@media (max-width: 900px) {
+    .whatsapp-layout {
+        grid-template-columns: 1fr;
+    }
+    .empty-chat {
+        display: none;
+    }
+}
+
+@media (max-width: 720px) {
+    .pane-header {
+        padding-top: max(0.5rem, var(--safe-top));
+    }
+    .chat-row {
+        padding: 0.65rem 0.75rem;
+    }
+    .avatar {
+        width: 2.75rem;
+        height: 2.75rem;
+        font-size: 0.85rem;
+    }
+    .profile-panel {
+        width: 100%;
+    }
 }

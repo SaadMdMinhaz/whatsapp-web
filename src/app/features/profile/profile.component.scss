@@ -152,3 +152,19 @@ input:focus {
   font-size: 0.9rem;
   border: 1px solid #fecaca;
 }
+
+@media (max-width: 720px) {
+  .page-header {
+    padding: 0.5rem 1rem;
+    padding-top: max(0.5rem, var(--safe-top));
+  }
+  .profile-content {
+    padding: 1.5rem 1rem;
+    padding-bottom: max(1.5rem, var(--safe-bottom));
+  }
+  .avatar-lg {
+    width: 5rem;
+    height: 5rem;
+    font-size: 1.75rem;
+  }
+}

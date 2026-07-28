@@ -120,7 +120,7 @@
                 <strong>{{ thread.title }}</strong>
                 <time>{{ thread.lastMessageAt }}</time>
               </div>
-              <p>{{ getOtherParticipantLastMessage(thread) }}</p>
+              <p [class.unread-bold]="thread.unreadCount > 0">{{ getOtherParticipantLastMessage(thread) }}</p>
             </div>
             @if (thread.unreadCount > 0) {
               <span class="unread">{{ thread.unreadCount }}</span>

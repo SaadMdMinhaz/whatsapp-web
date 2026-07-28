@@ -59,6 +59,7 @@ export interface ChatThread {
   unreadCount: number;
   lastMessage: string;
   lastMessageAt: string;
+  lastMessageTimestamp: string;
   lastMessageSenderId: string;
   archived: boolean;
   typingUserId?: string;
