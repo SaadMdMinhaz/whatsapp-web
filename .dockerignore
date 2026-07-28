@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+dist
+/.angular
+/coverage
+.git
+.gitignore
+*.md
+.cache
+.gitkeep
+.angular
+Thumbs.db
+.DS_Store
+ng-serve*.log
