@@ -1,0 +1,163 @@
+# Production compose - runs from pre-built images (no local build).
+# Usage:
+#   export DOCKER_USER=<your-docker-hub-username>
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.prod.yml ps
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: whatsapp-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-YourPassword123}"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    restart: unless-stopped
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${MSSQL_SA_PASSWORD:-YourPassword123}" -Q "SELECT 1" -C -No
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: whatsapp-db-init
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-YourPassword123}"
+    entrypoint: ["/bin/bash", "-c"]
+    command: >
+      /opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P "$$MSSQL_SA_PASSWORD" -C -No -i /sql/init.sql
+    volumes:
+      - ./sql:/sql
+    restart: "no"
+
+  redis:
+    image: redis:7-alpine
+    container_name: whatsapp-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  auth-server:
+    image: ${DOCKER_USER}/connectly-auth-server:${IMAGE_TAG:-latest}
+    container_name: whatsapp-auth-server
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:sqlserver://sqlserver:1433;databaseName=whatsapp_auth;encrypt=false;trustServerCertificate=true
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: "${MSSQL_SA_PASSWORD:-YourPassword123}"
+      USER_SERVICE_BASE_URL: http://user-service:8081
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  user-service:
+    image: ${DOCKER_USER}/connectly-user-service:${IMAGE_TAG:-latest}
+    container_name: whatsapp-user-service
+    ports:
+      - "8081:8081"
+    environment:
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:sqlserver://sqlserver:1433;databaseName=whatsapp_users;encrypt=false;trustServerCertificate=true
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: "${MSSQL_SA_PASSWORD:-YourPassword123}"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_FLYWAY_BASELINE_VERSION: "0"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  chat-service:
+    image: ${DOCKER_USER}/connectly-chat-service:${IMAGE_TAG:-latest}
+    container_name: whatsapp-chat-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:sqlserver://sqlserver:1433;databaseName=whatsapp_chat;encrypt=false;trustServerCertificate=true
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: "${MSSQL_SA_PASSWORD:-YourPassword123}"
+      GATEWAY_SERVICE_BASE_URL: http://gateway-service:8084
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+      gateway-service:
+        condition: service_started
+    restart: unless-stopped
+
+  media-service:
+    image: ${DOCKER_USER}/connectly-media-service:${IMAGE_TAG:-latest}
+    container_name: whatsapp-media-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:sqlserver://sqlserver:1433;databaseName=whatsapp_media;encrypt=false;trustServerCertificate=true
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: "${MSSQL_SA_PASSWORD:-YourPassword123}"
+      MEDIA_UPLOAD_DIR: /app/uploads
+    volumes:
+      - media-uploads:/app/uploads
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  gateway-service:
+    image: ${DOCKER_USER}/connectly-gateway-service:${IMAGE_TAG:-latest}
+    container_name: whatsapp-gateway-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    image: ${DOCKER_USER}/connectly-frontend:${IMAGE_TAG:-latest}
+    container_name: whatsapp-frontend
+    ports:
+      - "4200:4200"
+    depends_on:
+      auth-server:
+        condition: service_started
+      user-service:
+        condition: service_started
+      chat-service:
+        condition: service_started
+      media-service:
+        condition: service_started
+      gateway-service:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  sqlserver-data:
+  redis-data:
+  media-uploads:

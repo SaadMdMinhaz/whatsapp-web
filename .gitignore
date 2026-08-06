@@ -39,6 +39,3 @@ Thumbs.db
 
 # Logs
 ng-serve*.log
-
-# Deploy config (lives at parent level)
-docker-compose.yml
