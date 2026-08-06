@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connectly - Full Running Process (Clone &amp; Build / Docker Hub)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1922; color: #e4e8eb; line-height: 1.7; padding: 30px; }
+  .container { max-width: 1000px; margin: auto; }
+
+  h1 { font-size: 2rem; color: #00a884; margin-bottom: 4px; letter-spacing: -0.5px; }
+  h1 small { font-size: 1rem; color: #8696a0; font-weight: 400; }
+  .subtitle { color: #8696a0; margin-bottom: 24px; font-size: 0.95rem; }
+
+  h2 { font-size: 1.4rem; color: #00a884; margin: 32px 0 14px; padding-bottom: 8px; border-bottom: 2px solid #1f2c33; display: flex; align-items: center; gap: 10px; }
+  h2 .num { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; background: #00a884; color: #0f1922; border-radius: 6px; font-size: 0.85rem; font-weight: 700; flex-shrink: 0; }
+  h3 { font-size: 1.1rem; color: #d1d7db; margin: 22px 0 8px; }
+  h4 { font-size: 0.95rem; color: #aebac1; margin: 14px 0 6px; font-weight: 600; }
+
+  code { background: #1a2630; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 0.88em; color: #aad6fc; }
+  pre { background: #111b22; padding: 14px 18px; border-radius: 8px; overflow-x: auto; font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 0.82rem; color: #d4e4f0; margin: 10px 0; border: 1px solid #1f2c33; line-height: 1.6; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #1f2c33; font-size: 0.9rem; }
+  th { color: #00a884; font-weight: 600; background: #111b22; }
+  tr:hover td { background: #15202b; }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+  .badge-green { background: #00a88422; color: #00a884; }
+  .badge-yellow { background: #f5c54222; color: #f5c542; }
+  .badge-red { background: #ef444422; color: #ef4444; }
+  .badge-blue { background: #3b82f622; color: #60a5fa; }
+  .badge-purple { background: #a855f722; color: #c084fc; }
+
+  .card { background: #111b22; border: 1px solid #1f2c33; border-radius: 8px; padding: 18px 22px; margin: 14px 0; }
+  .card-title { font-weight: 600; color: #d1d7db; margin-bottom: 8px; font-size: 0.95rem; }
+
+  .step { display: flex; gap: 14px; margin: 16px 0; padding: 14px 18px; background: #111b22; border-radius: 8px; border-left: 3px solid #00a884; }
+  .step-num { flex-shrink: 0; width: 28px; height: 28px; background: #00a884; color: #0f1922; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; margin-top: 2px; }
+  .step-body { flex: 1; }
+  .step-body p { margin-bottom: 6px; }
+
+  .info { background: #0a1f28; border-left: 3px solid #3b82f6; padding: 12px 16px; border-radius: 6px; margin: 12px 0; font-size: 0.9rem; }
+  .warn { background: #1f1f0a; border-left: 3px solid #f5c542; padding: 12px 16px; border-radius: 6px; margin: 12px 0; font-size: 0.9rem; }
+  .danger { background: #2a0a0a; border-left: 3px solid #ef4444; padding: 12px 16px; border-radius: 6px; margin: 12px 0; font-size: 0.9rem; }
+
+  .diagram { background: #111b22; padding: 20px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; line-height: 1.8; color: #aebac1; margin: 12px 0; border: 1px solid #1f2c33; white-space: pre; overflow-x: auto; }
+
+  hr { border: none; border-top: 1px solid #1f2c33; margin: 30px 0; }
+  ul, ol { padding-left: 20px; margin: 8px 0; }
+  li { margin: 5px 0; }
+
+  .toc { background: #111b22; border: 1px solid #1f2c33; border-radius: 8px; padding: 18px 22px; margin: 20px 0; }
+  .toc a { color: #60a5fa; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  .cmd-block { background: #0a0f14; border-radius: 6px; margin: 8px 0; }
+  .cmd-block .cmd-header { padding: 6px 14px; font-size: 0.75rem; color: #5a7a8a; border-bottom: 1px solid #1f2c33; }
+  .cmd-block pre { border: none; margin: 0; }
+
+  details { background: #111b22; border: 1px solid #1f2c33; border-radius: 8px; padding: 14px 18px; margin: 12px 0; }
+  summary { cursor: pointer; font-weight: 600; color: #d1d7db; }
+
+  @media (max-width: 700px) { body { padding: 16px; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Connectly — Full Running Process <span class="badge badge-green">Documentation</span></h1>
+<p class="subtitle">Two complete ways to run the Connectly WhatsApp clone on any PC: <strong>Part 1</strong> — clone from Git and build the images yourself; <strong>Part 2</strong> — run directly from pre-built Docker Hub images. Both include HTTPS, firewall notes, and troubleshooting.</p>
+
+<div class="toc">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#overview">Overview — the two methods</a></li>
+    <li><a href="#prereq">Prerequisites (both methods)</a></li>
+    <li><a href="#part1">PART 1 — Clone from Git &amp; build yourself</a></li>
+    <li><a href="#part2">PART 2 — Run from Docker Hub images</a></li>
+    <li><a href="#https">HTTPS certificate setup</a></li>
+    <li><a href="#connect">Connecting other devices</a></li>
+    <li><a href="#troubleshoot">Troubleshooting</a></li>
+  </ol>
+</div>
+
+<h2 id="overview"><span class="num">1</span> Overview — the two methods</h2>
+<table>
+  <tr><th></th><th>PART 1 — Clone &amp; build</th><th>PART 2 — Docker Hub images</th></tr>
+  <tr><td><strong>What you get</strong></td><td>Full source, images built locally</td><td>Ready-made images, no build</td></tr>
+  <tr><td><strong>New PC needs</strong></td><td>Git + internet (downloads deps)</td><td>Docker + Docker Hub login</td></tr>
+  <tr><td><strong>First-run time</strong></td><td>Long (10–30 min build)</td><td>Fast (pull only)</td></tr>
+  <tr><td><strong>Compose file</strong></td><td><code>docker-compose.yml</code> (builds from <code>../</code> sibling repos)</td><td><code>docker-compose.otherpc.yml</code> (image names, no build)</td></tr>
+</table>
+
+<div class="info">Both methods produce the <strong>same running app</strong>. Choose Part 1 if you want to modify code; choose Part 2 for the fastest deployment on a new machine.</div>
+
+<h2 id="prereq"><span class="num">2</span> Prerequisites (both methods)</h2>
+<div class="card">
+  <ul>
+    <li><strong>Docker Desktop</strong> installed and running (Linux containers)</li>
+    <li><strong>Git for Windows</strong> (Part 1 only)</li>
+    <li>Ports free: <code>1433, 6379, 8080, 8081, 8082, 8083, 8084, 4200, 443</code></li>
+    <li>Same network as the devices that will use the app</li>
+    <li>Internet connection (downloads images / dependencies)</li>
+  </ul>
+</div>
+
+<h2 id="part1"><span class="num">3</span> PART 1 — Clone from Git &amp; build yourself</h2>
+<p><span class="badge badge-blue">Full control</span> <span class="badge badge-yellow">Builds on your PC</span></p>
+
+<div class="step"><div class="step-num">1</div><div class="step-body">
+  <p><strong>Clone all 6 repos into one parent folder.</strong> Folder names must match exactly (the compose file uses these paths):</p>
+  <div class="cmd-block"><div class="cmd-header">PowerShell</div><pre>mkdir C:\Connectly
+cd C:\Connectly
+
+git clone https://github.com/SaadMdMinhaz/whatsapp-web.git
+git clone https://github.com/SaadMdMinhaz/whatsapp-auth.git
+git clone https://github.com/SaadMdMinhaz/wharsapp-user-service.git
+git clone https://github.com/SaadMdMinhaz/whatsapp-chat-service.git
+git clone https://github.com/SaadMdMinhaz/whatsapp-media-service.git
+git clone https://github.com/SaadMdMinhaz/whatsapp-gateway-service.git</pre></div>
+</div></div>
+
+<div class="info">Resulting layout — compose runs from inside <code>whatsapp-web</code>:</div>
+<div class="diagram">C:\Connectly\
+├── whatsapp-web\            &lt;-- docker compose runs from here
+├── whatsapp-auth\
+├── wharsapp-user-service\
+├── whatsapp-chat-service\
+├── whatsapp-media-service\
+└── whatsapp-gateway-service\</div>
+
+<div class="step"><div class="step-num">2</div><div class="step-body">
+  <p><strong>(Recommended)</strong> Generate a certificate for <em>this</em> PC's IP — see <a href="#https">HTTPS section</a>.</p>
+</div></div>
+
+<div class="step"><div class="step-num">3</div><div class="step-body">
+  <p><strong>Build all images</strong> (first build downloads base images + all Maven deps, compiles each jar inside its container):</p>
+  <div class="cmd-block"><div class="cmd-header">PowerShell</div><pre>cd C:\Connectly\whatsapp-web
+docker compose build</pre></div>
+</div></div>
+
+<div class="step"><div class="step-num">4</div><div class="step-body">
+  <p><strong>Start everything:</strong></p>
+  <div class="cmd-block"><div class="cmd-header">PowerShell</div><pre>docker compose up -d</pre></div>
+  <p><code>db-init</code> creates the 4 databases then exits — one-shot job, not expected to keep running.</p>
+</div></div>
+
+<div class="step"><div class="step-num">5</div><div class="step-body">
+  <p><strong>Verify:</strong></p>
+  <div class="cmd-block"><div class="cmd-header">PowerShell</div><pre>docker compose ps</pre></div>
+  <p>Expected: sqlserver, redis, auth-server, user-service, chat-service, media-service, gateway-service, frontend.</p>
+</div></div>
+
+<h2 id="part2"><span class="num">4</span> PART 2 — Run from Docker Hub images</h2>
+<p><span class="badge badge-green">Fastest</span> <span class="badge badge-purple">No build</span></p>
+
+<h3>Step A — (Once, on a PC that already has the built images) Push to Docker Hub</h3>
+<div class="step"><div class="step-num">1</div><div class="step-body">
+  <p><strong>Log in to Docker Hub:</strong></p>
+  <div class="cmd-block"><div class="cmd-header">PowerShell</div><pre>docker login</pre></div>
+  <p>Enter your Docker Hub username and password (or access token).</p>
+</div></div>
+
+<div class="step"><div class="step-num">2</div><div class="step-body">
+  <p><strong>Tag each image with your Docker Hub username</strong> (replace <code>saadmdminhaz</code> if yours is different):</p>
+  <div class="cmd-block"><div class="cmd-header">PowerShell</div><pre>docker tag connectly/connectly-auth-server:latest     saadmdminhaz/connectly-auth-server:latest
+docker tag connectly/connectly-user-service:latest    saadmdminhaz/connectly-user-service:latest
+docker tag connectly/connectly-chat-service:latest    saadmdminhaz/connectly-chat-service:latest
+docker tag connectly/connectly-media-service:latest   saadmdminhaz/connectly-media-service:latest
+docker tag connectly/connectly-gateway-service:latest saadmdminhaz/connectly-gateway-service:latest
+docker tag connectly/connectly-frontend:latest        saadmdminhaz/connectly-frontend:latest</pre></div>
+</div></div>
+
+<div class="step"><div class="step-num">3</div><div class="step-body">
+  <p><strong>Push all 6 images:</strong></p>
+  <div class="cmd-block"><div class="cmd-header">PowerShell</div><pre>docker push saadmdminhaz/connectly-auth-server:latest
+docker push saadmdminhaz/connectly-user-service:latest
+docker push saadmdminhaz/connectly-chat-service:latest
+docker push saadmdminhaz/connectly-media-service:latest
+docker push saadmdminhaz/connectly-gateway-service:latest
+docker push saadmdminhaz/connectly-frontend:latest</pre></div>
+  <p>All 6 repos now appear under your Docker Hub profile.</p>
+</div></div>
+
+<h3>Step B — On the new PC (no build, just pull &amp; run)</h3>
+<div class="step"><div class="step-num">1</div><div class="step-body">
+  <p><strong>Copy these files</strong> from the <code>whatsapp-web</code> repo (already in Git) to the new PC:</p>
+  <div class="cmd-block"><div class="cmd-header">Copy</div><pre>docker-compose.otherpc.yml
+sql\        (init.sql + db-init.sh)
+certs\      (nginx.crt + nginx.key)</pre></div>
+</div></div>
+
+<div class="step"><div class="step-num">2</div><div class="step-body">
+  <p><strong>Log in and pull the images:</strong></p>
+  <div class="cmd-block"><div class="cmd-header">PowerShell (in the folder with docker-compose.otherpc.yml)</div><pre>docker login
+docker compose -f docker-compose.otherpc.yml pull</pre></div>
+</div></div>
+
+<div class="step"><div class="step-num">3</div><div class="step-body">
+  <p><strong>Start everything:</strong></p>
+  <div class="cmd-block"><div class="cmd-header">PowerShell</div><pre>docker compose -f docker-compose.otherpc.yml up -d
+docker compose -f docker-compose.otherpc.yml ps</pre></div>
+</div></div>
+
+<div class="info">The compose file <code>docker-compose.otherpc.yml</code> has your username <code>saadmdminhaz</code> hardcoded in the image names — no env vars needed. <code>sqlserver</code> and <code>redis</code> images come from official Docker repos automatically.</div>
+
+<h2 id="https"><span class="num">5</span> HTTPS certificate setup</h2>
+<p>Camera, mic, voice recording, and audio/video calls only work on <strong>HTTPS</strong>. A self-signed cert is included in the repo and works out of the box. For a clean per-PC setup, regenerate for this PC's IP:</p>
+
+<div class="step"><div class="step-num">1</div><div class="step-body">
+  <p><strong>Find this PC's IP:</strong> <code>ipconfig</code> → note the IPv4 address (e.g. <code>192.168.1.50</code>).</p>
+</div></div>
+
+<div class="step"><div class="step-num">2</div><div class="step-body">
+  <p><strong>Generate a cert for this IP</strong> (overwrites <code>certs/nginx.crt</code> + <code>nginx.key</code>):</p>
+  <div class="cmd-block"><div class="cmd-header">PowerShell (from the folder with certs/)</div><pre>docker run --rm -v "${PWD}\certs:/out" mcr.microsoft.com/mssql/server:2022-latest openssl req -x509 -nodes -newkey rsa:2048 -keyout /out/nginx.key -out /out/nginx.crt -days 825 -subj "/C=BD/O=Connectly/CN=&lt;THIS-PC-IP&gt;" -addext "subjectAltName=IP:&lt;THIS-PC-IP&gt;,DNS:localhost,IP:127.0.0.1"</pre></div>
+</div></div>
+
+<div class="warn">Skipping this is fine — the app still runs over HTTPS. The browser warning just mentions the IP mismatch. Click <strong>Advanced → Proceed</strong> once per browser.</div>
+
+<h2 id="connect"><span class="num">6</span> Connecting other devices</h2>
+<ol>
+  <li>On the <strong>host PC</strong>: <code>ipconfig</code> → note the IP</li>
+  <li>On any device on the same network: open <code>https://&lt;host-IP&gt;</code></li>
+  <li>Accept the certificate warning once (<strong>Advanced → Proceed</strong>)</li>
+  <li>Log in and use camera, mic, voice notes, and calls</li>
+</ol>
+
+<div class="info">Only the host PC needs Docker. Phones/tablets/laptops just need a browser on the same network.</div>
+
+<h3>Firewall</h3>
+<p><span class="badge badge-green">Default is fine</span> — Docker Desktop auto-adds an inbound "Allow" rule on all profiles. If devices can't connect, add rules (admin PowerShell):</p>
+<div class="cmd-block"><div class="cmd-header">PowerShell (Admin)</div><pre>netsh advfirewall firewall add rule name="Connectly HTTPS" dir=in action=allow protocol=TCP localport=443,4200</pre></div>
+
+<h2 id="troubleshoot"><span class="num">7</span> Troubleshooting</h2>
+
+<details>
+  <summary>db-init fails with <code>$'\r'</code> errors (CRLF)</summary>
+  <p>Only affects clones made before the <code>.gitattributes</code> fix. On a fresh clone it never happens. Fix an existing clone:</p>
+  <div class="cmd-block"><div class="cmd-header">PowerShell</div><pre>git rm --cached sql/db-init.sh
+git checkout HEAD -- sql/db-init.sh
+docker compose up -d</pre></div>
+</details>
+
+<details>
+  <summary>db-init exits even on fresh clone (exit 1)</summary>
+  <p>SQL Server was still warming up. Re-run — it retries up to 30 times (5s apart):</p>
+  <div class="cmd-block"><div class="cmd-header">PowerShell</div><pre>docker compose up -d</pre></div>
+</details>
+
+<details>
+  <summary>Devices can't connect</summary>
+  <p>Check, in order: same network → <code>Test-NetConnection localhost -Port 443</code> on host → try <code>http://&lt;IP&gt;:4200</code> (redirects to HTTPS) → add firewall rules → set Wi-Fi profile to <strong>Private</strong>.</p>
+</details>
+
+<details>
+  <summary>Camera / mic "not available"</summary>
+  <p>Must be on <strong>https://</strong>, not http. Clear cache/incognito after accepting the cert, and allow the permission prompt.</p>
+</details>
+
+<details>
+  <summary>Media upload fails / "No static resource api/v1/media"</summary>
+  <p>Fixed in the latest <code>nginx.conf</code>. Make sure <code>whatsapp-web</code> is the latest commit:</p>
+  <div class="cmd-block"><div class="cmd-header">PowerShell</div><pre>git -C C:\Connectly\whatsapp-web pull
+docker compose up -d --build frontend</pre></div>
+</details>
+
+<details>
+  <summary>Docker Hub pull fails / image not found</summary>
+  <ul>
+    <li>Use the correct username in <code>docker login</code> (not email).</li>
+    <li>With 2FA, use an <strong>Access Token</strong> (Docker Hub → Security → New Access Token).</li>
+    <li>Verify you pushed to the same account: check your Docker Hub profile has the 6 <code>connectly-*</code> repos.</li>
+  </ul>
+</details>
+
+<hr>
+<p style="color:#5a7a8a; font-size:0.85rem;">Connectly Full Running Process — Part 1: clone &amp; build from source. Part 2: run from Docker Hub images (saadmdminhaz/connectly-*). With HTTPS, firewall, and troubleshooting.</p>
+
+</div>
+</body>
+</html>
